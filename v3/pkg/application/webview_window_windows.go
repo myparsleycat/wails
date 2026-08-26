@@ -22,9 +22,9 @@ import (
 	"github.com/wailsapp/wails/v3/internal/sliceutil"
 	"github.com/wailsapp/wails/v3/internal/webview2/webviewloader"
 
+	"github.com/wailsapp/wails/v3/internal/webview2/pkg/edge"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/w32"
-	"github.com/wailsapp/wails/v3/internal/webview2/pkg/edge"
 )
 
 var edgeMap = map[string]uintptr{
@@ -2306,25 +2306,11 @@ func (w *windowsWebviewWindow) processRequest(
 ) {
 
 	// Setting the UserAgent on the CoreWebView2Settings clears the whole default UserAgent of the Edge browser, but
-	// we want to just append our ApplicationIdentifier. So we adjust the UserAgent for every request.
-	if reqHeaders, err := req.GetHeaders(); err == nil {
-		useragent, _ := reqHeaders.GetHeader(assetserver.HeaderUserAgent)
-		useragent = strings.Join([]string{useragent, assetserver.WailsUserAgentValue}, " ")
-		err = reqHeaders.SetHeader(assetserver.HeaderUserAgent, useragent)
-		if err != nil {
-			globalApplication.fatal("error setting UserAgent header: %w", err)
-		}
-		err = reqHeaders.SetHeader(
-			webViewRequestHeaderWindowId,
-			strconv.FormatUint(uint64(w.parent.id), 10),
-		)
-		if err != nil {
-			globalApplication.fatal("error setting WindowId header: %w", err)
-		}
-		err = reqHeaders.Release()
-		if err != nil {
-			globalApplication.fatal("error releasing headers: %w", err)
-		}
+	// we want to just append our ApplicationIdentifier. So we adjust the UserAgent for every request that belongs to
+	// a Wails-enabled window. Runtime-disabled windows host third-party pages and must retain the browser's original
+	// request headers; anti-bot challenges and other origin-sensitive services may reject Wails-specific mutations.
+	if w.shouldAddWailsRequestHeaders() {
+		w.addWailsRequestHeaders(req)
 	}
 
 	if globalApplication.assets == nil {
@@ -2363,6 +2349,32 @@ func (w *windowsWebviewWindow) processRequest(
 		Request:    webviewRequest,
 		windowId:   w.parent.id,
 		windowName: w.parent.options.Name,
+	}
+}
+
+func (w *windowsWebviewWindow) shouldAddWailsRequestHeaders() bool {
+	return !w.parent.options.DisableWailsRuntime
+}
+
+func (w *windowsWebviewWindow) addWailsRequestHeaders(req *edge.ICoreWebView2WebResourceRequest) {
+	if reqHeaders, err := req.GetHeaders(); err == nil {
+		useragent, _ := reqHeaders.GetHeader(assetserver.HeaderUserAgent)
+		useragent = strings.Join([]string{useragent, assetserver.WailsUserAgentValue}, " ")
+		err = reqHeaders.SetHeader(assetserver.HeaderUserAgent, useragent)
+		if err != nil {
+			globalApplication.fatal("error setting UserAgent header: %w", err)
+		}
+		err = reqHeaders.SetHeader(
+			webViewRequestHeaderWindowId,
+			strconv.FormatUint(uint64(w.parent.id), 10),
+		)
+		if err != nil {
+			globalApplication.fatal("error setting WindowId header: %w", err)
+		}
+		err = reqHeaders.Release()
+		if err != nil {
+			globalApplication.fatal("error releasing headers: %w", err)
+		}
 	}
 }
 
