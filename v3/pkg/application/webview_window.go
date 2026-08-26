@@ -804,7 +804,19 @@ func (w *WebviewWindow) SetBackgroundColour(colour RGBA) Window {
 	return w
 }
 
+func (w *WebviewWindow) wailsRuntimeDisabled() bool {
+	return w.options.DisableWailsRuntime
+}
+
+func disablesWailsRuntime(window Window) bool {
+	gate, ok := window.(interface{ wailsRuntimeDisabled() bool })
+	return ok && gate.wailsRuntimeDisabled()
+}
+
 func (w *WebviewWindow) HandleMessage(message string) {
+	if w.options.DisableWailsRuntime && strings.HasPrefix(message, "wails:") {
+		return
+	}
 	// Check for special messages
 	switch true {
 	case message == "wails:drag":

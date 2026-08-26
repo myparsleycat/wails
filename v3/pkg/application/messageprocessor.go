@@ -90,6 +90,9 @@ func (m *MessageProcessor) HandleRuntimeCallWithIDs(ctx context.Context, req *Ru
 		}
 	}()
 	targetWindow, nameOrID := m.getTargetWindow(req)
+	if disablesWailsRuntime(targetWindow) {
+		return nil, errs.NewInvalidRuntimeCallErrorf("wails runtime is disabled for this window")
+	}
 
 	var windowNotRequiredRequests = []int{callRequest, eventsRequest, applicationRequest, systemRequest}
 

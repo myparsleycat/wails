@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -81,6 +84,52 @@ func TestMessageProcessor_CancelWindowCalls_PreservesOtherWindows(t *testing.T) 
 	}
 	if _, ok := m.windowCalls[1]; ok {
 		t.Error("windowCalls[1] should be removed")
+	}
+}
+
+func TestHandleRuntimeCallRejectsDisabledWailsRuntime(t *testing.T) {
+	app := &App{windows: map[uint]Window{}}
+	window := &WebviewWindow{
+		id:      11,
+		options: WebviewWindowOptions{DisableWailsRuntime: true, Name: "gamebanana-login"},
+	}
+	app.windows[11] = window
+	prev := globalApplication
+	globalApplication = app
+	t.Cleanup(func() { globalApplication = prev })
+	app.Window = newWindowManager(app)
+
+	processor := NewMessageProcessor(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	_, err := processor.HandleRuntimeCallWithIDs(context.Background(), &RuntimeRequest{
+		Object:          callRequest,
+		Method:          CallBinding,
+		WebviewWindowID: 11,
+	})
+	if err == nil {
+		t.Fatal("expected isolated window runtime call to be rejected")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "disabled") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestHandleRuntimeCallAllowsNormalWindows(t *testing.T) {
+	app := &App{windows: map[uint]Window{}}
+	window := &WebviewWindow{id: 12, options: WebviewWindowOptions{Name: "main"}}
+	app.windows[12] = window
+	prev := globalApplication
+	globalApplication = app
+	t.Cleanup(func() { globalApplication = prev })
+	app.Window = newWindowManager(app)
+
+	processor := NewMessageProcessor(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	_, err := processor.HandleRuntimeCallWithIDs(context.Background(), &RuntimeRequest{
+		Object:          applicationRequest,
+		Args:            &Args{},
+		WebviewWindowID: 12,
+	})
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "disabled") {
+		t.Fatalf("normal window must still reach runtime dispatch: %v", err)
 	}
 }
 

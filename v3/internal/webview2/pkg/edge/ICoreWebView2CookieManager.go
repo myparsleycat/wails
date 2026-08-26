@@ -90,23 +90,23 @@ func (i *ICoreWebView2CookieManager) CopyCookie(cookie *ICoreWebView2Cookie) (*I
 	return newCookie, nil
 }
 
-// GetCookies gets all cookies matching the URI
-func (i *ICoreWebView2CookieManager) GetCookies(uri string) (*ICoreWebView2CookieList, error) {
-	var list *ICoreWebView2CookieList
+// GetCookies starts the official async GetCookies call. The completion
+// handler must stay alive until WebView2 invokes it.
+func (i *ICoreWebView2CookieManager) GetCookies(uri string, handler *iCoreWebView2GetCookiesCompletedHandler) error {
 	uriutf16, err := windows.UTF16PtrFromString(uri)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	hr, _, _ := i.vtbl.GetCookies.Call(
 		uintptr(unsafe.Pointer(i)),
 		uintptr(unsafe.Pointer(uriutf16)),
-		uintptr(unsafe.Pointer(&list)),
+		uintptr(unsafe.Pointer(handler)),
 	)
 	if hr != 0 {
-		return nil, syscall.Errno(hr)
+		return syscall.Errno(hr)
 	}
-	return list, nil
+	return nil
 }
 
 // DeleteCookies deletes all cookies with matching name and uri
