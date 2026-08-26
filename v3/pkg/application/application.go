@@ -851,6 +851,10 @@ func (a *App) handleWindowMessage(event *windowMessage) {
 	}
 	// Check if the message starts with "wails:"
 	if strings.HasPrefix(event.message, "wails:") {
+		if disablesWailsRuntime(window) {
+			a.debug("handleWindowMessage: ignoring wails message on isolated window")
+			return
+		}
 		a.debug("handleWindowMessage: Processing wails message", "message", event.message)
 		window.HandleMessage(event.message)
 	} else {

@@ -56,6 +56,7 @@ func (i *ICoreWebView2Cookie) GetName() (string, error) {
 	if hr != 0 {
 		return "", windows.Errno(hr)
 	}
+	defer windows.CoTaskMemFree(unsafe.Pointer(name))
 	return windows.UTF16PtrToString(name), nil
 }
 
@@ -69,6 +70,7 @@ func (i *ICoreWebView2Cookie) GetValue() (string, error) {
 	if hr != 0 {
 		return "", windows.Errno(hr)
 	}
+	defer windows.CoTaskMemFree(unsafe.Pointer(value))
 	return windows.UTF16PtrToString(value), nil
 }
 
@@ -98,6 +100,7 @@ func (i *ICoreWebView2Cookie) GetDomain() (string, error) {
 	if hr != 0 {
 		return "", windows.Errno(hr)
 	}
+	defer windows.CoTaskMemFree(unsafe.Pointer(domain))
 	return windows.UTF16PtrToString(domain), nil
 }
 
@@ -111,6 +114,7 @@ func (i *ICoreWebView2Cookie) GetPath() (string, error) {
 	if hr != 0 {
 		return "", windows.Errno(hr)
 	}
+	defer windows.CoTaskMemFree(unsafe.Pointer(path))
 	return windows.UTF16PtrToString(path), nil
 }
 
