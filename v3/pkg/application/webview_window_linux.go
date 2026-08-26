@@ -440,6 +440,9 @@ func (w *linuxWebviewWindow) run() {
 	})
 
 	w.parent.RegisterHook(events.Linux.WindowLoadFinished, func(e *WindowEvent) {
+		if w.parent.options.DisableWailsRuntime {
+			return
+		}
 		// Inject runtime core and EnableFileDrop flag together
 		js := runtime.Core(globalApplication.impl.GetFlags(globalApplication.options))
 		js += fmt.Sprintf("window._wails.flags.enableFileDrop=%v;", w.parent.options.EnableFileDrop)
