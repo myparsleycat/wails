@@ -222,9 +222,10 @@ type WebviewWindowOptions struct {
 	DefaultContextMenuDisabled bool
 
 	// DisableWailsRuntime prevents injecting the Wails JS runtime into this
-	// window and ignores incoming `wails:` host messages. Native window
-	// events, navigation, and cookie APIs remain available. Use this for
-	// third-party pages that must not reach Go services.
+	// window, ignores incoming `wails:` host messages, and leaves outgoing
+	// web requests free of Wails-specific headers. Native window events,
+	// navigation, and cookie APIs remain available. Use this for third-party
+	// pages that must not reach Go services or receive Wails request metadata.
 	DisableWailsRuntime bool
 
 	// KeyBindings is a map of key bindings to functions
