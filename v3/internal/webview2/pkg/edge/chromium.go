@@ -998,6 +998,51 @@ func (e *Chromium) SendMouseInput(
 	return e.compositionController.SendMouseInput(eventKind, virtualKeys, mouseData, POINT{X: int32(x), Y: int32(y)})
 }
 
+// DragTargetEnter forwards an IDropTarget::DragEnter to the composition
+// controller. dataObject is an IDataObject* from the OS drag loop; x/y are in
+// the WebView's client coordinates. Returns the drop effect WebView2 selected
+// based on the page's dragenter handlers.
+func (e *Chromium) DragTargetEnter(dataObject uintptr, keyState uint32, x, y int32) (uint32, error) {
+	if !e.CompositionControllerReady() {
+		return 0, errors.New("webview2 composition controller is not initialized")
+	}
+
+	return e.compositionController4.DragEnter(dataObject, keyState, POINT{X: x, Y: y})
+}
+
+// DragTargetOver forwards an IDropTarget::DragOver to the composition
+// controller. x/y are in the WebView's client coordinates. Returns the drop
+// effect WebView2 selected based on the page's dragover handlers.
+func (e *Chromium) DragTargetOver(keyState uint32, x, y int32) (uint32, error) {
+	if !e.CompositionControllerReady() {
+		return 0, errors.New("webview2 composition controller is not initialized")
+	}
+
+	return e.compositionController4.DragOver(keyState, POINT{X: x, Y: y})
+}
+
+// DragTargetLeave forwards an IDropTarget::DragLeave to the composition
+// controller.
+func (e *Chromium) DragTargetLeave() error {
+	if !e.CompositionControllerReady() {
+		return errors.New("webview2 composition controller is not initialized")
+	}
+
+	return e.compositionController4.DragLeave()
+}
+
+// DragTargetDrop forwards an IDropTarget::Drop to the composition controller.
+// dataObject is an IDataObject* from the OS drag loop; x/y are in the
+// WebView's client coordinates. Returns the drop effect WebView2 selected
+// based on the page's drop handlers.
+func (e *Chromium) DragTargetDrop(dataObject uintptr, keyState uint32, x, y int32) (uint32, error) {
+	if !e.CompositionControllerReady() {
+		return 0, errors.New("webview2 composition controller is not initialized")
+	}
+
+	return e.compositionController4.Drop(dataObject, keyState, POINT{X: x, Y: y})
+}
+
 func (e *Chromium) AllowExternalDrag(allow bool) error {
 	if !HasCapability(e.webview2RuntimeVersion, AllowExternalDrop) {
 		return UnsupportedCapabilityError

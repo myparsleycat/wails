@@ -74,6 +74,16 @@ type DropTarget struct {
 	OnLeave       func()
 	OnOver        func()
 	OnDrop        func(filenames []string, x int, y int)
+
+	// Raw forwarding hooks. When set, they receive the untouched IDropTarget
+	// arguments and take precedence over the callbacks above. They return the
+	// drop effect reported back to the OS drag loop. They exist for WebView2
+	// composition hosting, where the host must implement IDropTarget and
+	// forward DragEnter/DragOver/DragLeave/Drop to the composition controller
+	// (ICoreWebView2CompositionController3).
+	OnEnterObject func(dataObject *IDataObject, keyState DWORD, point POINT) (effect DWORD)
+	OnOverObject  func(keyState DWORD, point POINT) (effect DWORD)
+	OnDropObject  func(dataObject *IDataObject, keyState DWORD, point POINT) (effect DWORD)
 }
 
 func NewDropTarget() *DropTarget {
@@ -85,6 +95,10 @@ func NewDropTarget() *DropTarget {
 }
 
 func (d *DropTarget) DragEnter(dataObject *IDataObject, grfKeyState DWORD, point POINT, pdfEffect *DWORD) uintptr {
+	if d.OnEnterObject != nil {
+		*pdfEffect = d.OnEnterObject(dataObject, grfKeyState, point)
+		return uintptr(windows.S_OK)
+	}
 	*pdfEffect = d.OnEnterEffect
 	if d.OnEnter != nil {
 		d.OnEnter()
@@ -93,6 +107,10 @@ func (d *DropTarget) DragEnter(dataObject *IDataObject, grfKeyState DWORD, point
 }
 
 func (d *DropTarget) DragOver(grfKeyState DWORD, point POINT, pdfEffect *DWORD) uintptr {
+	if d.OnOverObject != nil {
+		*pdfEffect = d.OnOverObject(grfKeyState, point)
+		return uintptr(windows.S_OK)
+	}
 	*pdfEffect = d.OnOverEffect
 	if d.OnOver != nil {
 		d.OnOver()
@@ -108,6 +126,10 @@ func (d *DropTarget) DragLeave() uintptr {
 }
 
 func (d *DropTarget) Drop(dataObject *IDataObject, grfKeyState DWORD, point POINT, pdfEffect *DWORD) uintptr {
+	if d.OnDropObject != nil {
+		*pdfEffect = d.OnDropObject(dataObject, grfKeyState, point)
+		return uintptr(windows.S_OK)
+	}
 
 	if d.OnDrop == nil {
 		return uintptr(windows.S_OK)
