@@ -25,6 +25,12 @@ func (w *windowsWebviewWindow) registerFileDropTarget() {
 		return
 	}
 
+	// RegisterDragDrop requires OLE initialization on the registering thread.
+	// The main thread already runs COM STA through the edge package init
+	// (CoInitializeEx APARTMENTTHREADED); OleInitialize layers the OLE services
+	// (clipboard/drag-drop) on top and reports S_FALSE when already done.
+	w32.OleInitialise()
+
 	dropTarget := w32.NewDropTarget()
 	dropTarget.OnEnterObject = func(dataObject *w32.IDataObject, keyState w32.DWORD, point w32.POINT) w32.DWORD {
 		return w.forwardFileDragEnter(dataObject, keyState, point)
