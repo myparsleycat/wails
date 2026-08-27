@@ -5,6 +5,7 @@ package application
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -2815,6 +2816,7 @@ func (w *windowsWebviewWindow) processMessageWithAdditionalObjects(
 	sender *edge.ICoreWebView2,
 	args *edge.ICoreWebView2WebMessageReceivedEventArgs,
 ) {
+	log.Printf("[FileDropDebug] processMessageWithAdditionalObjects: %q", message)
 	if strings.HasPrefix(message, "file:drop:") {
 		objs, err := args.GetAdditionalObjects()
 		if err != nil {

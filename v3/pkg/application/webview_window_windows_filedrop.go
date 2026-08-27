@@ -3,6 +3,7 @@
 package application
 
 import (
+	"log"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/w32"
@@ -69,6 +70,7 @@ func (w *windowsWebviewWindow) forwardFileDragEnter(dataObject *w32.IDataObject,
 		return w32.DROPEFFECT_NONE
 	}
 	effect, err := w.chromium.DragTargetEnter(uintptr(unsafe.Pointer(dataObject)), uint32(keyState), x, y)
+	log.Printf("[FileDropDebug] DragEnter forwarded: effect=%d err=%v", effect, err)
 	if err != nil {
 		return w32.DROPEFFECT_NONE
 	}
@@ -90,9 +92,11 @@ func (w *windowsWebviewWindow) forwardFileDragOver(keyState w32.DWORD, point w32
 func (w *windowsWebviewWindow) forwardFileDrop(dataObject *w32.IDataObject, keyState w32.DWORD, point w32.POINT) w32.DWORD {
 	x, y, ok := w.compositionDropPoint(point)
 	if !ok {
+		log.Printf("[FileDropDebug] Drop: ScreenToClient failed")
 		return w32.DROPEFFECT_NONE
 	}
 	effect, err := w.chromium.DragTargetDrop(uintptr(unsafe.Pointer(dataObject)), uint32(keyState), x, y)
+	log.Printf("[FileDropDebug] Drop forwarded at (%d,%d): effect=%d err=%v", x, y, effect, err)
 	if err != nil {
 		return w32.DROPEFFECT_NONE
 	}
