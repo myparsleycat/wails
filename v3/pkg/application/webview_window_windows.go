@@ -5,7 +5,6 @@ package application
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -117,10 +116,6 @@ type windowsWebviewWindow struct {
 	// hosting creates no native WebView2 drop target, so the host must accept
 	// external drops itself and forward them to the composition controller.
 	dropTarget *w32.DropTarget
-
-	// lastDropDragEffect caches the drop effect last reported by the
-	// composition controller so DragOver logging can be throttled to changes.
-	lastDropDragEffect w32.DWORD
 }
 
 func (w *windowsWebviewWindow) setMenu(menu *Menu) {
@@ -2820,7 +2815,6 @@ func (w *windowsWebviewWindow) processMessageWithAdditionalObjects(
 	sender *edge.ICoreWebView2,
 	args *edge.ICoreWebView2WebMessageReceivedEventArgs,
 ) {
-	log.Printf("[FileDropDebug] processMessageWithAdditionalObjects: %q", message)
 	if strings.HasPrefix(message, "file:drop:") {
 		objs, err := args.GetAdditionalObjects()
 		if err != nil {
