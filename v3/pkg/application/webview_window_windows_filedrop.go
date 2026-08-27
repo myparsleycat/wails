@@ -86,6 +86,10 @@ func (w *windowsWebviewWindow) forwardFileDragOver(keyState w32.DWORD, point w32
 	if err != nil {
 		return w32.DROPEFFECT_NONE
 	}
+	if effect != w.lastDropDragEffect {
+		log.Printf("[FileDropDebug] DragOver effect=%d err=%v", effect, err)
+		w.lastDropDragEffect = effect
+	}
 	return w32.DWORD(effect)
 }
 
