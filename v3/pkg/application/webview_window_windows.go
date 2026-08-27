@@ -110,6 +110,12 @@ type windowsWebviewWindow struct {
 
 	// Modal window tracking
 	parentHWND w32.HWND // Parent window HWND when this window is a modal
+
+	// dropTarget is the OLE drop target registered on the host window when
+	// file drop is enabled with WebView2 composition hosting. Composition
+	// hosting creates no native WebView2 drop target, so the host must accept
+	// external drops itself and forward them to the composition controller.
+	dropTarget *w32.DropTarget
 }
 
 func (w *windowsWebviewWindow) setMenu(menu *Menu) {
@@ -507,6 +513,16 @@ func (w *windowsWebviewWindow) run() {
 
 	w.setupChromium()
 
+	// Composition hosting creates no native WebView2 HWND that accepts
+	// external drops, so with EnableFileDrop the host window must register an
+	// IDropTarget that forwards drag events to the composition controller.
+	// Without this, file drags are rejected with the no-drop cursor and no DOM
+	// drag events reach the page. In HWND hosting mode WebView2 registers its
+	// own drop target on its child HWND and handles this natively.
+	if options.EnableFileDrop && options.Windows.WebView2CompositionHosting {
+		w.registerFileDropTarget()
+	}
+
 	if options.Windows.WindowDidMoveDebounceMS == 0 {
 		options.Windows.WindowDidMoveDebounceMS = 50
 	}
@@ -858,6 +874,11 @@ func (w *windowsWebviewWindow) destroy() {
 	if w.parentHWND != 0 {
 		w32.EnableWindow(w.parentHWND, true)
 		w.parentHWND = 0
+	}
+
+	if w.dropTarget != nil {
+		_ = w32.RevokeDragDrop(w.hwnd)
+		w.dropTarget = nil
 	}
 
 	w.parent.markAsDestroyed()
