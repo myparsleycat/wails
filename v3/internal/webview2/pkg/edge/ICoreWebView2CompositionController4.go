@@ -71,3 +71,64 @@ func (i *ICoreWebView2CompositionController4) GetNonClientRegionAtPoint(point PO
 	}
 	return value, nil
 }
+
+// DragEnter forwards an IDropTarget::DragEnter call to WebView2. The data
+// object pointer is an IDataObject* borrowed from the OS drag loop; WebView2
+// keeps it only for the duration of the drag. The point must be in the
+// WebView's client coordinates, like SendMouseInput.
+func (i *ICoreWebView2CompositionController4) DragEnter(dataObject uintptr, keyState uint32, point POINT, effect uint32) (uint32, error) {
+	hr, _, _ := i.Vtbl.DragEnter.Call(
+		uintptr(unsafe.Pointer(i)),
+		dataObject,
+		uintptr(keyState),
+		point.uintptr(),
+		uintptr(unsafe.Pointer(&effect)),
+	)
+	if int32(hr) < 0 {
+		return 0, syscall.Errno(hr)
+	}
+	return effect, nil
+}
+
+// DragOver forwards an IDropTarget::DragOver call to WebView2. The point must
+// be in the WebView's client coordinates, like SendMouseInput.
+func (i *ICoreWebView2CompositionController4) DragOver(keyState uint32, point POINT, effect uint32) (uint32, error) {
+	hr, _, _ := i.Vtbl.DragOver.Call(
+		uintptr(unsafe.Pointer(i)),
+		uintptr(keyState),
+		point.uintptr(),
+		uintptr(unsafe.Pointer(&effect)),
+	)
+	if int32(hr) < 0 {
+		return 0, syscall.Errno(hr)
+	}
+	return effect, nil
+}
+
+// DragLeave forwards an IDropTarget::DragLeave call to WebView2.
+func (i *ICoreWebView2CompositionController4) DragLeave() error {
+	hr, _, _ := i.Vtbl.DragLeave.Call(
+		uintptr(unsafe.Pointer(i)),
+	)
+	if int32(hr) < 0 {
+		return syscall.Errno(hr)
+	}
+	return nil
+}
+
+// Drop forwards an IDropTarget::Drop call to WebView2. The data object pointer
+// is only valid for the duration of the call. The point must be in the
+// WebView's client coordinates, like SendMouseInput.
+func (i *ICoreWebView2CompositionController4) Drop(dataObject uintptr, keyState uint32, point POINT, effect uint32) (uint32, error) {
+	hr, _, _ := i.Vtbl.Drop.Call(
+		uintptr(unsafe.Pointer(i)),
+		dataObject,
+		uintptr(keyState),
+		point.uintptr(),
+		uintptr(unsafe.Pointer(&effect)),
+	)
+	if int32(hr) < 0 {
+		return 0, syscall.Errno(hr)
+	}
+	return effect, nil
+}
