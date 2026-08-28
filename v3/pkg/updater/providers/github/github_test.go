@@ -109,7 +109,7 @@ func TestCheck_404_TreatedAsUpToDate(t *testing.T) {
 	}
 }
 
-func TestCheck_NoMatchingAsset_Errors(t *testing.T) {
+func TestCheck_NoMatchingAsset_IsUpToDate(t *testing.T) {
 	var host string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, sampleReleaseJSON, host, host, host)
@@ -117,13 +117,16 @@ func TestCheck_NoMatchingAsset_Errors(t *testing.T) {
 	defer srv.Close()
 	host = srv.URL
 	p, _ := github.New(github.Config{Repository: "o/r", BaseURL: srv.URL})
-	_, err := p.Check(context.Background(), updater.CheckRequest{
+	rel, err := p.Check(context.Background(), updater.CheckRequest{
 		CurrentVersion: "1.0.0",
 		Platform:       "freebsd",
 		Arch:           "amd64",
 	})
-	if err == nil || !strings.Contains(err.Error(), "no asset for freebsd/amd64") {
-		t.Fatalf("expected no-asset error, got %v", err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel != nil {
+		t.Fatalf("release without a compatible asset should be skipped, got %+v", rel)
 	}
 }
 
@@ -183,6 +186,88 @@ func TestCheck_Prerelease_SkipsDrafts(t *testing.T) {
 	// Should have requested per_page>1 so we can skip over leading drafts.
 	if len(paths) != 1 || !strings.Contains(paths[0], "per_page=") || strings.Contains(paths[0], "per_page=1&") || strings.HasSuffix(paths[0], "per_page=1") {
 		t.Errorf("expected per_page>1, got %v", paths)
+	}
+}
+
+func TestCheck_Prerelease_SelectsHighestCompatibleSemver(t *testing.T) {
+	var host string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("per_page") != "100" {
+			t.Errorf("per_page: got %q, want 100", r.URL.Query().Get("per_page"))
+		}
+		fmt.Fprintf(w, `[
+		  {
+		    "tag_name": "v2.65.0", "draft": false, "prerelease": false,
+		    "published_at": "2026-04-04T10:00:00Z",
+		    "assets": [{"id": 1, "name": "Nahida-Desktop-Setup-2.65.0.exe", "size": 1, "browser_download_url": "%s/v2"}]
+		  },
+		  {
+		    "tag_name": "v3.0.0-beta.2", "draft": false, "prerelease": true,
+		    "published_at": "2026-04-02T10:00:00Z",
+		    "assets": [{"id": 2, "name": "nahida-desktop-windows-amd64.exe", "size": 2, "browser_download_url": "%s/beta2"}]
+		  },
+		  {
+		    "tag_name": "v3.0.0-beta.3", "draft": true, "prerelease": true,
+		    "published_at": "2026-04-03T10:00:00Z",
+		    "assets": [{"id": 3, "name": "nahida-desktop-windows-amd64.exe", "size": 3, "browser_download_url": "%s/draft"}]
+		  },
+		  {
+		    "tag_name": "v3.0.0-beta.1", "draft": false, "prerelease": true,
+		    "published_at": "2026-04-01T10:00:00Z",
+		    "assets": [{"id": 4, "name": "nahida-desktop-windows-amd64.exe", "size": 4, "browser_download_url": "%s/beta1"}]
+		  },
+		  {
+		    "tag_name": "not-semver", "draft": false, "prerelease": true,
+		    "published_at": "2026-04-05T10:00:00Z",
+		    "assets": [{"id": 5, "name": "nahida-desktop-windows-amd64.exe", "size": 5, "browser_download_url": "%s/invalid"}]
+		  }
+		]`, host, host, host, host, host)
+	}))
+	defer srv.Close()
+	host = srv.URL
+
+	p, _ := github.New(github.Config{Repository: "o/r", BaseURL: srv.URL, Prerelease: true})
+	rel, err := p.Check(context.Background(), updater.CheckRequest{
+		CurrentVersion: "3.0.0-beta.1",
+		Platform:       "windows",
+		Arch:           "amd64",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel == nil || rel.Version != "3.0.0-beta.2" {
+		t.Fatalf("selected release = %+v, want v3.0.0-beta.2", rel)
+	}
+}
+
+func TestCheck_Prerelease_SelectsStableOverBeta(t *testing.T) {
+	var host string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `[
+		  {
+		    "tag_name": "v3.0.0-beta.4", "draft": false, "prerelease": true,
+		    "assets": [{"name": "app-windows-amd64.exe", "browser_download_url": "%s/beta"}]
+		  },
+		  {
+		    "tag_name": "v3.0.0", "draft": false, "prerelease": false,
+		    "assets": [{"name": "app-windows-amd64.exe", "browser_download_url": "%s/stable"}]
+		  }
+		]`, host, host)
+	}))
+	defer srv.Close()
+	host = srv.URL
+
+	p, _ := github.New(github.Config{Repository: "o/r", BaseURL: srv.URL, Prerelease: true})
+	rel, err := p.Check(context.Background(), updater.CheckRequest{
+		CurrentVersion: "3.0.0-beta.3",
+		Platform:       "windows",
+		Arch:           "amd64",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel == nil || rel.Version != "3.0.0" || rel.Channel != "stable" {
+		t.Fatalf("selected release = %+v, want stable v3.0.0", rel)
 	}
 }
 

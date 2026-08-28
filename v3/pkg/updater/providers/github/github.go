@@ -115,29 +115,36 @@ func (p *Provider) Name() string { return "github" }
 func (p *Provider) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
 	endpoint := p.base + "/repos/" + p.cfg.Repository + "/releases/latest"
 	if p.cfg.Prerelease {
-		// Fetch a small page so we can skip any drafts at the top of the
-		// list. The /releases endpoint includes drafts when the request is
-		// authenticated, and the API does not guarantee the first item is
-		// the newest *published* release once drafts are present.
-		endpoint = p.base + "/repos/" + p.cfg.Repository + "/releases?per_page=10"
+		// Include enough history to tolerate another release line publishing
+		// after the current channel. Selection below is based on SemVer and
+		// compatible assets, not GitHub's creation-time ordering.
+		endpoint = p.base + "/repos/" + p.cfg.Repository + "/releases?per_page=100"
 	}
-	rel, err := p.fetchRelease(ctx, endpoint)
+	releases, err := p.fetchReleases(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	if rel == nil {
+	var selected *apiRelease
+	selectedAsset := -1
+	for i := range releases {
+		rel := &releases[i]
+		if rel.Draft || !semver.IsNewer(rel.TagName, req.CurrentVersion) {
+			continue
+		}
+		asset := p.cfg.AssetMatcher(req, asReleaseAssets(rel.Assets))
+		if asset < 0 || asset >= len(rel.Assets) {
+			continue
+		}
+		if selected == nil || semver.Compare(rel.TagName, selected.TagName) > 0 {
+			selected = rel
+			selectedAsset = asset
+		}
+	}
+	if selected == nil {
 		return nil, nil
 	}
-	if !semver.IsNewer(rel.TagName, req.CurrentVersion) {
-		return nil, nil
-	}
-
-	idx := p.cfg.AssetMatcher(req, asReleaseAssets(rel.Assets))
-	if idx < 0 || idx >= len(rel.Assets) {
-		return nil, fmt.Errorf("github: release %s has no asset for %s/%s",
-			rel.TagName, req.Platform, req.Arch)
-	}
-	picked := rel.Assets[idx]
+	rel := selected
+	picked := rel.Assets[selectedAsset]
 
 	out := &updater.Release{
 		Version:     semver.TrimPrefix(rel.TagName),
@@ -270,7 +277,7 @@ func (p *Provider) setAuth(req *http.Request) {
 	}
 }
 
-func (p *Provider) fetchRelease(ctx context.Context, endpoint string) (*apiRelease, error) {
+func (p *Provider) fetchReleases(ctx context.Context, endpoint string) ([]apiRelease, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -297,19 +304,13 @@ func (p *Provider) fetchRelease(ctx context.Context, endpoint string) (*apiRelea
 		if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
 			return nil, fmt.Errorf("github: decode releases list: %w", err)
 		}
-		for i := range list {
-			if list[i].Draft {
-				continue
-			}
-			return &list[i], nil
-		}
-		return nil, nil
+		return list, nil
 	}
 	var rel apiRelease
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
 		return nil, fmt.Errorf("github: decode release: %w", err)
 	}
-	return &rel, nil
+	return []apiRelease{rel}, nil
 }
 
 func (p *Provider) fetchChecksumFor(ctx context.Context, assets []apiAsset, sidecarName, targetName string) ([]byte, error) {
