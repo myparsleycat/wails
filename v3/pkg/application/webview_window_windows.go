@@ -2705,7 +2705,7 @@ func (w *windowsWebviewWindow) navigationCompleted(
 			"window._wails.flags.enableFileDrop = %v; window._wails.flags.nonClientRegionTracking = %v; window._wails.flags.nativeCompositionFileDrop = %v;",
 			w.parent.options.EnableFileDrop,
 			w.parent.options.Windows.WebView2CompositionHosting,
-			w.parent.options.EnableFileDrop && w.parent.options.Windows.WebView2CompositionHosting,
+			w.usesNativeCompositionFileDrop(),
 		)
 		w.execJS(js)
 	}
@@ -2826,6 +2826,15 @@ func (w *windowsWebviewWindow) processMessageWithAdditionalObjects(
 	args *edge.ICoreWebView2WebMessageReceivedEventArgs,
 ) {
 	if strings.HasPrefix(message, "file:drop:") {
+		// Older @wailsio/runtime packages always post WebView2 File objects on
+		// DOM drop. Composition-hosted windows already resolve the same CF_HDROP
+		// through the native OLE target, so accepting this message would dispatch
+		// WindowFilesDropped twice. Newer runtimes suppress the post themselves;
+		// keep this host-side guard for applications bundling an older runtime.
+		if w.usesNativeCompositionFileDrop() {
+			return
+		}
+
 		objs, err := args.GetAdditionalObjects()
 		if err != nil {
 			globalApplication.handleError(err)

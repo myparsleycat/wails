@@ -9,6 +9,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/w32"
 )
 
+func (w *windowsWebviewWindow) usesNativeCompositionFileDrop() bool {
+	return w != nil &&
+		w.parent != nil &&
+		w.parent.options.EnableFileDrop &&
+		w.parent.options.Windows.WebView2CompositionHosting
+}
+
 // registerFileDropTarget registers an OLE drop target on the host window and
 // forwards drag events to the WebView2 composition controller.
 //
