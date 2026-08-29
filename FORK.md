@@ -2,12 +2,12 @@
 
 Fork of [wailsapp/wails](https://github.com/wailsapp/wails) used by nahida-desktop.
 
-Branch `v3-nahida` is based on `v3.0.0-beta.15` plus the patches below.
+Branch `v3-nahida` is based on `v3.0.0-beta.16` plus the patches below.
 The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.15-nahida.8
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.16-nahida.1
 ```
 
 ## Patches
@@ -28,3 +28,8 @@ Added for GitHub updater channels shared with older application releases:
 - Inspect up to 100 releases when prereleases are enabled
 - Select the highest newer SemVer that has a compatible platform asset
 - Skip drafts, older versions, invalid tags, and releases for other packaging formats
+
+Added for attached modal focus restoration on Windows:
+
+- Re-enable the modal owner before destroying the foreground modal
+- Restore owner activation without stealing focus when a background modal closes
