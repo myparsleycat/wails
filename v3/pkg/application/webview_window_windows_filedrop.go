@@ -3,6 +3,7 @@
 package application
 
 import (
+	"math"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/w32"
@@ -33,15 +34,32 @@ func (w *windowsWebviewWindow) registerFileDropTarget() {
 
 	dropTarget := w32.NewDropTarget()
 	dropTarget.OnEnterObject = func(dataObject *w32.IDataObject, keyState w32.DWORD, point w32.POINT, allowedEffect w32.DWORD) w32.DWORD {
-		return w.forwardFileDragEnter(dataObject, keyState, point, allowedEffect)
+		w.fileDragActive = dataObject.SupportsFileDrop()
+		return w.acceptPendingFileDrop(w.forwardFileDragEnter(dataObject, keyState, point, allowedEffect), allowedEffect)
 	}
 	dropTarget.OnOverObject = func(keyState w32.DWORD, point w32.POINT, allowedEffect w32.DWORD) w32.DWORD {
-		return w.forwardFileDragOver(keyState, point, allowedEffect)
+		return w.acceptPendingFileDrop(w.forwardFileDragOver(keyState, point, allowedEffect), allowedEffect)
 	}
 	dropTarget.OnDropObject = func(dataObject *w32.IDataObject, keyState w32.DWORD, point w32.POINT, allowedEffect w32.DWORD) w32.DWORD {
-		return w.forwardFileDrop(dataObject, keyState, point, allowedEffect)
+		defer func() { w.fileDragActive = false }()
+
+		effect := w.forwardFileDrop(dataObject, keyState, point, allowedEffect)
+		paths, err := dataObject.FileDropPaths()
+		if err != nil || len(paths) == 0 {
+			return effect
+		}
+
+		x, y, ok := w.compositionDropCSSPoint(point)
+		if ok {
+			// The OLE callback runs on the window thread. InitiateFrontendDropProcessing
+			// synchronously dispatches back to that thread, so hand the immutable drop
+			// payload to a worker after the COM callback is allowed to return.
+			go w.parent.InitiateFrontendDropProcessing(paths, x, y)
+		}
+		return w.acceptPendingFileDrop(effect, allowedEffect)
 	}
 	dropTarget.OnLeave = func() {
+		w.fileDragActive = false
 		_ = w.chromium.DragTargetLeave()
 	}
 
@@ -50,6 +68,39 @@ func (w *windowsWebviewWindow) registerFileDropTarget() {
 		return
 	}
 	w.dropTarget = dropTarget
+}
+
+// compositionDropCSSPoint converts the OLE screen point to logical pixels for
+// document.elementFromPoint. WebView2's composition drag APIs use physical
+// client pixels, while the runtime's platform drop handler consumes CSS pixels.
+func (w *windowsWebviewWindow) compositionDropCSSPoint(point w32.POINT) (int, int, bool) {
+	x, y, ok := w.compositionDropPoint(point)
+	if !ok {
+		return 0, 0, false
+	}
+
+	dpi := w32.GetDpiForWindow(w.hwnd)
+	if dpi == 0 {
+		return int(x), int(y), true
+	}
+	scale := float64(dpi) / 96.0
+	return int(math.Round(float64(x) / scale)), int(math.Round(float64(y) / scale)), true
+}
+
+func (w *windowsWebviewWindow) acceptPendingFileDrop(effect, allowedEffect w32.DWORD) w32.DWORD {
+	if effect != w32.DROPEFFECT_NONE || !w.fileDragActive {
+		return effect
+	}
+	return preferredFileDropEffect(allowedEffect)
+}
+
+func preferredFileDropEffect(allowedEffect w32.DWORD) w32.DWORD {
+	for _, effect := range [...]w32.DWORD{w32.DROPEFFECT_COPY, w32.DROPEFFECT_MOVE, w32.DROPEFFECT_LINK} {
+		if allowedEffect&effect != 0 {
+			return effect
+		}
+	}
+	return w32.DROPEFFECT_NONE
 }
 
 // compositionDropPoint converts a screen-space drag point to the WebView's

@@ -135,25 +135,9 @@ func (d *DropTarget) Drop(dataObject *IDataObject, grfKeyState DWORD, point POIN
 		return uintptr(windows.S_OK)
 	}
 
-	// Extract filenames from dataObject
-	var filenames []string
-	var formatETC = FORMATETC{
-		CfFormat: CF_HDROP,
-		Tymed:    TYMED_HGLOBAL,
-	}
-
-	var stgMedium STGMEDIUM
-
-	err := dataObject.GetData(&formatETC, &stgMedium)
-	if err != nil && err != windows.ERROR_SUCCESS {
+	filenames, err := dataObject.FileDropPaths()
+	if err != nil {
 		return uintptr(windows.S_FALSE)
-	}
-	defer stgMedium.Release()
-	hDrop := stgMedium.Union
-	_, numFiles := DragQueryFile(hDrop, 0xFFFFFFFF)
-	for i := uint(0); i < numFiles; i++ {
-		filename, _ := DragQueryFile(hDrop, i)
-		filenames = append(filenames, filename)
 	}
 
 	d.OnDrop(filenames, int(point.X), int(point.Y))

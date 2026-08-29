@@ -3,6 +3,7 @@
 package w32
 
 import (
+	"errors"
 	"golang.org/x/sys/windows"
 	"syscall"
 	"unsafe"
@@ -112,6 +113,46 @@ func (i *IDataObject) DAdvise(formatEtc *FORMATETC, advf uint32, adviseSink *IAd
 		return syscall.Errno(hr)
 	}
 	return err
+}
+
+// SupportsFileDrop reports whether the data object exposes Windows' CF_HDROP
+// format, which contains paths for files dragged from Explorer and compatible
+// shell data sources.
+func (i *IDataObject) SupportsFileDrop() bool {
+	if i == nil {
+		return false
+	}
+	err := i.QueryGetData(fileDropFormat())
+	return err == nil || errors.Is(err, windows.ERROR_SUCCESS)
+}
+
+// FileDropPaths extracts file paths from a CF_HDROP data object.
+func (i *IDataObject) FileDropPaths() ([]string, error) {
+	if i == nil {
+		return nil, errors.New("file drop data object is nil")
+	}
+
+	var medium STGMEDIUM
+	if err := i.GetData(fileDropFormat(), &medium); err != nil && !errors.Is(err, windows.ERROR_SUCCESS) {
+		return nil, err
+	}
+	defer medium.Release()
+
+	hDrop := medium.Union
+	_, count := DragQueryFile(hDrop, 0xFFFFFFFF)
+	paths := make([]string, 0, count)
+	for index := uint(0); index < count; index++ {
+		path, _ := DragQueryFile(hDrop, index)
+		paths = append(paths, path)
+	}
+	return paths, nil
+}
+
+func fileDropFormat() *FORMATETC {
+	return &FORMATETC{
+		CfFormat: CF_HDROP,
+		Tymed:    TYMED_HGLOBAL,
+	}
 }
 
 type DVTargetDevice struct {

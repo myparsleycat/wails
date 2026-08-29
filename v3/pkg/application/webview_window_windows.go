@@ -116,6 +116,10 @@ type windowsWebviewWindow struct {
 	// hosting creates no native WebView2 drop target, so the host must accept
 	// external drops itself and forward them to the composition controller.
 	dropTarget *w32.DropTarget
+	// fileDragActive tracks whether the current OLE drag exposes CF_HDROP.
+	// WebView2 can report DROPEFFECT_NONE before its DOM handlers run, so the
+	// host keeps those fast file drops eligible until Drop resolves the target.
+	fileDragActive bool
 }
 
 func (w *windowsWebviewWindow) setMenu(menu *Menu) {
@@ -2698,9 +2702,10 @@ func (w *windowsWebviewWindow) navigationCompleted(
 		// runtime modules see a consistent _wails configuration at startup.
 		js := runtime.Core(globalApplication.impl.GetFlags(globalApplication.options))
 		js += fmt.Sprintf(
-			"window._wails.flags.enableFileDrop = %v; window._wails.flags.nonClientRegionTracking = %v;",
+			"window._wails.flags.enableFileDrop = %v; window._wails.flags.nonClientRegionTracking = %v; window._wails.flags.nativeCompositionFileDrop = %v;",
 			w.parent.options.EnableFileDrop,
 			w.parent.options.Windows.WebView2CompositionHosting,
+			w.parent.options.EnableFileDrop && w.parent.options.Windows.WebView2CompositionHosting,
 		)
 		w.execJS(js)
 	}

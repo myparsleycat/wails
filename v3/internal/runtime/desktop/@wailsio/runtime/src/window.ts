@@ -816,7 +816,11 @@ function setupDropTargetListeners() {
 
         // On Windows, handle file drops via JavaScript
         // On macOS/Linux, native code will call HandlePlatformFileDrop
-        if (canResolveFilePaths()) {
+        // Composition-hosted windows resolve CF_HDROP paths in the native host
+        // so a quick drop cannot outrun WebView2's DOM drag event dispatch.
+        // The DOM drop still fires for application handlers, but posting the
+        // File objects here would duplicate the native WindowFilesDropped event.
+        if (canResolveFilePaths() && (window as any)._wails?.flags?.nativeCompositionFileDrop !== true) {
             const files: File[] = [];
             if (event.dataTransfer.items) {
                 for (const item of event.dataTransfer.items) {
