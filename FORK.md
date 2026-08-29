@@ -10,6 +10,17 @@ fork with a `replace` directive, for example:
 replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.16-nahida.2
 ```
 
+## Maintenance policy
+
+- This fork exists to support `nahida-desktop`; fork-specific changes are committed and
+  pushed directly to `myparsleycat/wails` after relevant verification passes.
+- `wailsapp/wails` is treated as a read-only upstream. Do not create upstream issues or
+  pull requests for these patches, and never push fork branches or tags there.
+- Upstream-specific review automation, including CodeRabbit, is optional and is not a
+  commit or release gate for this fork.
+- Record consumer-visible patches below and publish a new `-nahida.N` tag when
+  `nahida-desktop` needs to pin the change.
+
 ## Patches
 
 Added for GameBanana auto-login:

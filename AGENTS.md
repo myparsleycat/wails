@@ -1,25 +1,39 @@
-# AI Agent Instructions for Wails v3
+# AI Agent Instructions for the Nahida Wails v3 Fork
 
-## Issue Tracking with GitHub
+## Fork Scope and Remotes
 
-**IMPORTANT**: GitHub Issues and pull requests are the authoritative trackers for this project. Do not create a parallel local issue database or markdown task list.
+This is a purpose-built fork used by `nahida-desktop`, not a workspace for contributing
+changes back to Wails upstream.
 
-### Workflow for AI Agents
+- `origin` (`myparsleycat/wails`) is the writable personal fork.
+- `upstream` (`wailsapp/wails`) is read-only reference material.
+- Never create an issue or pull request in `wailsapp/wails` for fork-specific work.
+- Never push branches, commits, or tags to `upstream`.
+- Upstream issues, pull requests, and documentation may be inspected when useful, but
+  searching or linking them is not a prerequisite for work in this fork.
 
-1. Search existing GitHub issues and pull requests before creating new work.
-2. Link implementation work to the relevant issue or pull request.
-3. File newly discovered actionable work as a GitHub issue with reproduction details, scope, and acceptance criteria.
-4. Use labels, milestones, and cross-references to express priority, release scope, and dependencies.
-5. Close issues only after the work is complete and verified; otherwise document why the item is deferred or no longer applicable.
+## Workflow for AI Agents
+
+1. Keep changes focused on behavior required by `nahida-desktop`.
+2. Follow the API selected by `v3/go.mod` and prefer the checked-out source when it
+   disagrees with published documentation.
+3. Add focused tests for changed behavior and run the applicable tests, linters, runtime
+   builds, and asset generation before committing.
+4. Update `FORK.md` when a patch changes the fork's behavior or consumer requirements.
+5. Use Conventional Commits and the repository's configured Git identity. There is no
+   required bot identity for this personal fork.
+6. Once the requested change is verified, it may be committed and pushed to `origin`
+   without a separate review-service run or an additional push-confirmation round trip.
+7. Report the commit, tag when applicable, verification performed, and remote sync state.
 
 ### Important Rules
 
-- Do not duplicate existing GitHub issues.
-- Keep issue descriptions current when scope or reproduction steps change.
+- CodeRabbit is optional and is not a commit or push gate.
+- Do not create GitHub issues or pull requests unless the user explicitly requests one.
+  Regardless of the request context, never create them in `wailsapp/wails` from this fork.
 - Store AI-generated planning documents in `history/`, not the repository root.
-- **ALWAYS run `coderabbit --plain` before committing** to catch issues early.
-- All commits must use the `taliesin-ai` identity.
-- Never push until the user gives explicit manual confirmation.
+- Preserve unrelated worktree changes and do not rewrite shared history unless explicitly
+  requested.
 
 ### Managing AI-Generated Planning Documents
 
@@ -87,25 +101,27 @@ measured bug they prevent.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, complete the applicable steps below. Never push without explicit manual confirmation from the user.
+**When ending a work session**, complete the applicable steps below.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **Prepare for remote sync**:
+1. **Run quality gates** (if code changed) - Tests, linters, builds, and generated-asset checks
+2. **Document remaining work** - Report follow-up work in the handoff; do not create an
+   upstream issue or pull request
+3. **Prepare for remote sync**:
    ```bash
    git status
    ```
-   When the worktree is clean and synchronization is intended, run
-   `git pull --rebase`.
-   Run `git push` only after the user explicitly confirms it.
-5. **Clean up** - Review stashes and remove only obsolete ones; prune remote branches
-6. **Verify** - All intended changes are present and committed when requested
-7. **Hand off** - Provide context for next session
+   Resolve the exact branch and confirm the push remote is `origin`, never `upstream`.
+4. **Commit and sync** - After verification, commit requested changes and push them to
+   `origin`. Push a release tag when the consumer is being pinned to that tag.
+5. **Clean up** - Review stashes and remove only obsolete ones; prune remote branches only
+   when it is safe and relevant
+6. **Verify** - Confirm intended commits and tags exist on `origin` and the worktree is clean
+7. **Hand off** - Report what changed, verification results, commit/tag identifiers, and any
+   known environmental limitations
 
 **CRITICAL RULES:**
-- Use the `taliesin-ai` identity for every commit.
-- Do not push without explicit manual confirmation.
-- Report clearly whether changes are uncommitted, committed locally, or pushed.
+- Treat `upstream` as read-only; never create an issue or pull request in `wailsapp/wails`.
+- CodeRabbit and other upstream-specific review automation are not required.
+- Push only verified, intentional changes to `origin` and report the resulting remote state.
