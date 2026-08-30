@@ -35,6 +35,43 @@ changes back to Wails upstream.
 - Preserve unrelated worktree changes and do not rewrite shared history unless explicitly
   requested.
 
+## Windows Full-Suite Test Preflight
+
+Do not run `go test ./...` in `v3/` with the host's default Go toolchain. The binding
+generator golden tests are sensitive to standard-library types: a newer Go release can
+introduce packages such as `encoding/json/v2`, produce large misleading golden diffs, and
+leave untracked files under `internal/generator/testdata/output`.
+
+Before a full Windows test run:
+
+1. Run the focused tests for the changed packages first. For example, application dialog
+   changes start with `go test ./pkg/application`.
+2. Read the `go` directive from `v3/go.mod` and set `GOTOOLCHAIN` to that exact version.
+   Confirm the selected version with `go version` before testing.
+3. The Windows wake tests execute both `sh` and commands such as `true`. Discover the Git
+   installation from `Get-Command git` and prepend both Git's `usr/bin` and `bin`
+   directories to `PATH` for the test process.
+4. Only after this preflight, run `go test ./...` when the task or acceptance criteria
+   actually require the full suite.
+
+Use this PowerShell pattern from `v3/`:
+
+```powershell
+$wailsGoVersion = (Select-String -Path go.mod -Pattern '^go\s+(\S+)$').Matches.Groups[1].Value
+$env:GOTOOLCHAIN = "go$wailsGoVersion"
+$gitExe = (Get-Command git).Source
+$gitRoot = Split-Path -Parent (Split-Path -Parent $gitExe)
+$env:PATH = "$gitRoot\usr\bin;$gitRoot\bin;$env:PATH"
+go version
+go test ./...
+```
+
+If a full run fails because the preflight was not applied, do not repeatedly restart the
+entire suite. Correct the environment, rerun the failing package first, and perform at
+most one clean full-suite rerun if it is still required. Do not update generator golden
+files to match output from the wrong Go version. Remove only verified test-generated
+artifacts, and stop further test runs immediately when the user asks to skip them.
+
 ### Managing AI-Generated Planning Documents
 
 AI assistants often create planning and design documents during development:
