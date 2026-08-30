@@ -1,11 +1,15 @@
 package application
 
 import (
+	"errors"
 	"strings"
 	"sync"
 )
 
 type DialogType int
+
+// ErrDialogCancelled is returned when the user cancels a native file dialog.
+var ErrDialogCancelled = errors.New("dialog cancelled by user")
 
 var dialogMapID = make(map[uint]struct{})
 var dialogIDLock sync.RWMutex

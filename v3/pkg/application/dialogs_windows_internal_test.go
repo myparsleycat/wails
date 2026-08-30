@@ -3,8 +3,10 @@
 package application
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/wailsapp/wails/v3/internal/go-common-file-dialog/cfd"
 	"golang.org/x/sys/windows"
 )
 
@@ -27,4 +29,24 @@ func TestMessageDialogUserIconFlags(t *testing.T) {
 	if got&windows.MB_ICONINFORMATION == windows.MB_ICONINFORMATION {
 		t.Errorf("standard icon bits must be stripped when using MB_USERICON: flags=%#x", got)
 	}
+}
+
+func TestNormalizeFileDialogError(t *testing.T) {
+	t.Run("cancellation", func(t *testing.T) {
+		err := normalizeFileDialogError(cfd.ErrorCancelled)
+		if !errors.Is(err, ErrDialogCancelled) {
+			t.Fatalf("expected ErrDialogCancelled, got %v", err)
+		}
+	})
+
+	t.Run("other error", func(t *testing.T) {
+		original := errors.New("dialog failed")
+		err := normalizeFileDialogError(original)
+		if err != original {
+			t.Fatalf("expected original error identity to be preserved, got %v", err)
+		}
+		if err.Error() != original.Error() {
+			t.Fatalf("expected original error message to be preserved, got %q", err.Error())
+		}
+	})
 }

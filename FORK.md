@@ -7,7 +7,7 @@ The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.16-nahida.3
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.16-nahida.4
 ```
 
 ## Maintenance policy
@@ -47,3 +47,8 @@ Added for attached modal focus restoration on Windows:
 
 - Re-enable the modal owner before destroying the foreground modal
 - Restore owner activation without stealing focus when a background modal closes
+
+Added for native file dialog cancellation on Windows:
+
+- Expose `application.ErrDialogCancelled` for open, save, folder, and multiple-selection dialogs
+- Preserve all non-cancellation errors returned by the native common file dialog implementation

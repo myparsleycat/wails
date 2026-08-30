@@ -3,6 +3,7 @@
 package application
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -279,7 +280,7 @@ func showCfdDialog(newDlg func() (cfd.Dialog, error), isMultiSelect bool, parent
 	if multi, _ := dlg.(cfd.OpenMultipleFilesDialog); multi != nil && isMultiSelect {
 		paths, err := multi.ShowAndGetResults()
 		if err != nil {
-			return nil, err
+			return nil, normalizeFileDialogError(err)
 		}
 
 		for i, path := range paths {
@@ -290,7 +291,14 @@ func showCfdDialog(newDlg func() (cfd.Dialog, error), isMultiSelect bool, parent
 
 	path, err := dlg.ShowAndGetResult()
 	if err != nil {
-		return nil, err
+		return nil, normalizeFileDialogError(err)
 	}
 	return filepath.Clean(path), nil
+}
+
+func normalizeFileDialogError(err error) error {
+	if errors.Is(err, cfd.ErrorCancelled) {
+		return ErrDialogCancelled
+	}
+	return err
 }
