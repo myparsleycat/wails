@@ -2,12 +2,12 @@
 
 Fork of [wailsapp/wails](https://github.com/wailsapp/wails) used by nahida-desktop.
 
-Branch `v3-nahida` is based on `v3.0.0-beta.16` plus the patches below.
+Branch `v3-nahida` is based on `v3.0.0-beta.17` plus the patches below.
 The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.16-nahida.4
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.17-nahida.1
 ```
 
 ## Maintenance policy
