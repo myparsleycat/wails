@@ -2409,6 +2409,7 @@ func (w *windowsWebviewWindow) addWailsRequestHeaders(req *edge.ICoreWebView2Web
 }
 
 func (w *windowsWebviewWindow) setupChromium() {
+	appOpts := globalApplication.startWindowsBrowser()
 	chromium := w.chromium
 	debugMode := globalApplication.isDebugMode
 
@@ -2425,7 +2426,6 @@ func (w *windowsWebviewWindow) setupChromium() {
 
 	// Browser flags apply globally to the shared WebView2 environment
 	// Use application-level options, not per-window options
-	appOpts := globalApplication.options.Windows
 
 	// We disable this by default. Can be overridden with the `EnableFraudulentWebsiteWarnings` option
 	disabledFeatures := append([]string{"msSmartScreenProtection"}, appOpts.DisabledFeatures...)

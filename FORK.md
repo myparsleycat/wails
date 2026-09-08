@@ -52,3 +52,11 @@ Added for native file dialog cancellation on Windows:
 
 - Expose `application.ErrDialogCancelled` for open, save, folder, and multiple-selection dialogs
 - Preserve all non-cancellation errors returned by the native common file dialog implementation
+
+## Startup browser arguments
+
+`App.SetWindowsBrowserArguments` lets the desktop load network settings after
+the single-instance lock is acquired and before the first WebView is created.
+It copies the complete argument list, applies it to all Windows WebViews, and
+rejects changes once WebView initialization starts. Runtime proxy changes still
+require restarting the application.

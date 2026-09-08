@@ -408,6 +408,8 @@ type eventHook struct {
 }
 
 type App struct {
+	windowsBrowserMu              sync.Mutex
+	windowsBrowserStarted         bool
 	ctx                           context.Context
 	cancel                        context.CancelFunc
 	options                       Options
@@ -516,7 +518,11 @@ type App struct {
 }
 
 func (a *App) Config() Options {
-	return a.options
+	a.windowsBrowserMu.Lock()
+	defer a.windowsBrowserMu.Unlock()
+	options := a.options
+	options.Windows.AdditionalBrowserArgs = slices.Clone(options.Windows.AdditionalBrowserArgs)
+	return options
 }
 
 // Context returns the application context that is canceled when the application shuts down.
