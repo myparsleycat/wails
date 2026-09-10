@@ -5,6 +5,7 @@ package application
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
 	"strconv"
@@ -1648,6 +1649,13 @@ func (w *windowsWebviewWindow) WndProc(msg uint32, wparam, lparam uintptr) uintp
 		if w.routeCompositionMouseInput(msg, wparam, lparam) {
 			return 0
 		}
+	} else if msg == w32.WM_NCHITTEST && w.customResizeBorder() != nil {
+		screenX := int(w32.GET_X_LPARAM(lparam))
+		screenY := int(w32.GET_Y_LPARAM(lparam))
+		if hitTest, ok := w.resizeBorderHitTest(screenX, screenY); ok {
+			return hitTest
+		}
+		return w32.HTCLIENT
 	}
 
 	switch msg {
@@ -2700,7 +2708,18 @@ func (w *windowsWebviewWindow) navigationCompleted(
 	if !w.parent.options.DisableWailsRuntime {
 		// Inject runtime core and window-specific flags together so side-effect
 		// runtime modules see a consistent _wails configuration at startup.
-		js := runtime.Core(globalApplication.impl.GetFlags(globalApplication.options))
+		flags := globalApplication.impl.GetFlags(globalApplication.options)
+		if resizeBorder := w.customResizeBorder(); resizeBorder != nil {
+			flags = maps.Clone(flags)
+			inside := scaleResizeBorder(resizeBorder.Inside, 96)
+			flags["resizeBorderInside"] = map[string]int{
+				"left":   inside.Left,
+				"right":  inside.Right,
+				"top":    inside.Top,
+				"bottom": inside.Bottom,
+			}
+		}
+		js := runtime.Core(flags)
 		js += fmt.Sprintf(
 			"window._wails.flags.enableFileDrop = %v; window._wails.flags.nonClientRegionTracking = %v; window._wails.flags.nativeCompositionFileDrop = %v;",
 			w.parent.options.EnableFileDrop,

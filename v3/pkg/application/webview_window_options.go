@@ -357,6 +357,19 @@ const (
 	CoreWebView2PermissionStateDeny
 )
 
+// WindowsWindowResizeBorder configures the resize hit-test area around a
+// frameless Windows window. Values are device-independent pixels measured from
+// the visible window edge. Inside extends into the window content and Outside
+// extends into the invisible native frame. The effective outside area cannot
+// exceed the native frame owned by Windows.
+//
+// Set WindowsWindow.ResizeBorder to nil to retain Wails' default system-sized
+// resize areas and enlarged corner targets. Negative values are treated as 0.
+type WindowsWindowResizeBorder struct {
+	Inside  LRTB
+	Outside LRTB
+}
+
 type WindowsWindow struct {
 	// Select the type of translucent backdrop. Requires Windows 11 22621 or later.
 	// Only used when window's `BackgroundType` is set to `BackgroundTypeTranslucent`.
@@ -402,6 +415,13 @@ type WindowsWindow struct {
 	// content and resolved through GetNonClientRegionAtPoint / SendMouseInput.
 	// Default: false
 	WebView2CompositionHosting bool
+
+	// ResizeBorder controls the resize hit-test area for frameless windows.
+	// The same Inside values are used by the JavaScript runtime and the native
+	// Windows hit test so HWND-hosted and composition-hosted WebViews behave
+	// consistently. Set to nil to use the system defaults.
+	// Default: nil
+	ResizeBorder *WindowsWindowResizeBorder
 
 	// WindowDidMoveDebounceMS is the amount of time to debounce the WindowDidMove event
 	// when moving the window

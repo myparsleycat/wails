@@ -53,6 +53,12 @@ Added for native file dialog cancellation on Windows:
 - Expose `application.ErrDialogCancelled` for open, save, folder, and multiple-selection dialogs
 - Preserve all non-cancellation errors returned by the native common file dialog implementation
 
+Added for frameless resize hit testing on Windows:
+
+- `WindowsWindow.ResizeBorder` configures independent inside and outside resize widths for every edge
+- Apply inside widths to both the native hit test and JavaScript runtime, without the default enlarged corner targets
+- Measure outside widths from DWM's visible frame and clamp them to the native invisible frame
+
 ## Startup browser arguments
 
 `App.SetWindowsBrowserArguments` lets the desktop load network settings after

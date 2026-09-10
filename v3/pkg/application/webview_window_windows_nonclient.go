@@ -7,8 +7,8 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v3/pkg/w32"
 	"github.com/wailsapp/wails/v3/internal/webview2/pkg/edge"
+	"github.com/wailsapp/wails/v3/pkg/w32"
 )
 
 type nonClientHitTestState struct {
@@ -55,8 +55,10 @@ func (w *windowsWebviewWindow) applyCompositionCursor(cursor edge.HCURSOR, syste
 func (w *windowsWebviewWindow) routeNonClientInput(msg uint32, wparam, lparam uintptr) (uintptr, bool) {
 	switch msg {
 	case w32.WM_NCHITTEST:
+		customResizeBorder := w.customResizeBorder()
 		if hitTest, handled := w32.DwmDefWindowProc(w.hwnd, msg, wparam, lparam); handled {
-			if hitTest != w32.HTCLIENT && hitTest != w32.HTNOWHERE {
+			if hitTest != w32.HTCLIENT && hitTest != w32.HTNOWHERE &&
+				(customResizeBorder == nil || !isResizeHitTest(hitTest)) {
 				return hitTest, true
 			}
 		}
@@ -68,7 +70,15 @@ func (w *windowsWebviewWindow) routeNonClientInput(msg uint32, wparam, lparam ui
 			return hitTest, true
 		}
 
-		return w.nonClientHitTestFromScreen(screenX, screenY)
+		if hitTest, ok := w.nonClientHitTestFromScreen(screenX, screenY); ok {
+			return hitTest, true
+		}
+		if customResizeBorder != nil {
+			// Suppress DefWindowProc's system-sized resize result outside the
+			// configured bands while preserving client interaction.
+			return w32.HTCLIENT, true
+		}
+		return 0, false
 	case w32.WM_NCMOUSEMOVE:
 		screenX := int(w32.GET_X_LPARAM(lparam))
 		screenY := int(w32.GET_Y_LPARAM(lparam))
@@ -209,6 +219,22 @@ func (w *windowsWebviewWindow) resizeBorderHitTest(screenX, screenY int) (uintpt
 	}
 
 	rect := w32.GetWindowRect(w.hwnd)
+	if resizeBorder := w.customResizeBorder(); resizeBorder != nil {
+		visibleRect := *rect
+		var frameRect w32.RECT
+		if w32.SUCCEEDED(w32.DwmGetWindowAttribute(
+			w.hwnd,
+			w32.DWMWA_EXTENDED_FRAME_BOUNDS,
+			unsafe.Pointer(&frameRect),
+			unsafe.Sizeof(frameRect),
+		)) && validVisibleFrameRect(frameRect, *rect) {
+			visibleRect = frameRect
+		}
+
+		dpi, _ := w.DPI()
+		return resizeBorderHitTestForRects(screenX, screenY, *rect, visibleRect, *resizeBorder, dpi)
+	}
+
 	width := int(rect.Right - rect.Left)
 	height := int(rect.Bottom - rect.Top)
 	if width <= 0 || height <= 0 {
@@ -256,6 +282,94 @@ func (w *windowsWebviewWindow) resizeBorderHitTest(screenX, screenY int) (uintpt
 	default:
 		return 0, false
 	}
+}
+
+func (w *windowsWebviewWindow) customResizeBorder() *WindowsWindowResizeBorder {
+	if !w.parent.options.Frameless {
+		return nil
+	}
+	return w.parent.options.Windows.ResizeBorder
+}
+
+func validVisibleFrameRect(visible, window w32.RECT) bool {
+	return visible.Left < visible.Right && visible.Top < visible.Bottom &&
+		visible.Left >= window.Left && visible.Top >= window.Top &&
+		visible.Right <= window.Right && visible.Bottom <= window.Bottom
+}
+
+func resizeBorderHitTestForRects(
+	screenX, screenY int,
+	windowRect, visibleRect w32.RECT,
+	resizeBorder WindowsWindowResizeBorder,
+	dpi w32.UINT,
+) (uintptr, bool) {
+	inside := scaleResizeBorder(resizeBorder.Inside, dpi)
+	outside := scaleResizeBorder(resizeBorder.Outside, dpi)
+
+	left := inHalfOpenRange(
+		screenX,
+		max(int(windowRect.Left), int(visibleRect.Left)-outside.Left),
+		min(int(windowRect.Right), int(visibleRect.Left)+inside.Left),
+	)
+	right := inHalfOpenRange(
+		screenX,
+		max(int(windowRect.Left), int(visibleRect.Right)-inside.Right),
+		min(int(windowRect.Right), int(visibleRect.Right)+outside.Right),
+	)
+	top := inHalfOpenRange(
+		screenY,
+		max(int(windowRect.Top), int(visibleRect.Top)-outside.Top),
+		min(int(windowRect.Bottom), int(visibleRect.Top)+inside.Top),
+	)
+	bottom := inHalfOpenRange(
+		screenY,
+		max(int(windowRect.Top), int(visibleRect.Bottom)-inside.Bottom),
+		min(int(windowRect.Bottom), int(visibleRect.Bottom)+outside.Bottom),
+	)
+
+	switch {
+	case top && left:
+		return w32.HTTOPLEFT, true
+	case top && right:
+		return w32.HTTOPRIGHT, true
+	case bottom && left:
+		return w32.HTBOTTOMLEFT, true
+	case bottom && right:
+		return w32.HTBOTTOMRIGHT, true
+	case top:
+		return w32.HTTOP, true
+	case bottom:
+		return w32.HTBOTTOM, true
+	case left:
+		return w32.HTLEFT, true
+	case right:
+		return w32.HTRIGHT, true
+	default:
+		return 0, false
+	}
+}
+
+func scaleResizeBorder(border LRTB, dpi w32.UINT) LRTB {
+	if dpi == 0 {
+		dpi = 96
+	}
+	scale := func(value int) int {
+		return w32.MulDiv(max(value, 0), int(dpi), 96)
+	}
+	return LRTB{
+		Left:   scale(border.Left),
+		Right:  scale(border.Right),
+		Top:    scale(border.Top),
+		Bottom: scale(border.Bottom),
+	}
+}
+
+func inHalfOpenRange(value, start, end int) bool {
+	return start < end && value >= start && value < end
+}
+
+func isResizeHitTest(hitTest uintptr) bool {
+	return hitTest >= w32.HTLEFT && hitTest <= w32.HTBOTTOMRIGHT
 }
 
 func systemMetricForDPI(index int, dpi w32.UINT) int {

@@ -256,11 +256,17 @@ function onMouseMove(event: MouseEvent): void {
         return;
     }
 
+    const configuredBorder = GetFlag("resizeBorderInside") as ResizeBorder | undefined;
     const resizeHandleHeight = GetFlag("system.resizeHandleHeight") || 5;
     const resizeHandleWidth = GetFlag("system.resizeHandleWidth") || 5;
 
+    const leftWidth = configuredBorder?.left ?? resizeHandleWidth;
+    const rightWidth = configuredBorder?.right ?? resizeHandleWidth;
+    const topHeight = configuredBorder?.top ?? resizeHandleHeight;
+    const bottomHeight = configuredBorder?.bottom ?? resizeHandleHeight;
+
     // Extra pixels for the corner areas.
-    const cornerExtra = GetFlag("resizeCornerExtra") || 10;
+    const cornerExtra = configuredBorder ? 0 : GetFlag("resizeCornerExtra") || 10;
 
     // When a scrollbar is present at the window edge it consumes mouse events in that strip.
     // Shift the effective content edge inward so the resize zone sits just before the scrollbar.
@@ -269,16 +275,16 @@ function onMouseMove(event: MouseEvent): void {
     const rightContentEdge = window.innerWidth - scrollbarWidth;
     const bottomContentEdge = window.innerHeight - scrollbarHeight;
 
-    const rightBorder = event.clientX < rightContentEdge && (rightContentEdge - event.clientX) < resizeHandleWidth;
-    const leftBorder = event.clientX < resizeHandleWidth;
-    const topBorder = event.clientY < resizeHandleHeight;
-    const bottomBorder = event.clientY < bottomContentEdge && (bottomContentEdge - event.clientY) < resizeHandleHeight;
+    const rightBorder = event.clientX < rightContentEdge && (rightContentEdge - event.clientX) < rightWidth;
+    const leftBorder = event.clientX < leftWidth;
+    const topBorder = event.clientY < topHeight;
+    const bottomBorder = event.clientY < bottomContentEdge && (bottomContentEdge - event.clientY) < bottomHeight;
 
     // Adjust for corner areas.
-    const rightCorner = event.clientX < rightContentEdge && (rightContentEdge - event.clientX) < (resizeHandleWidth + cornerExtra);
-    const leftCorner = event.clientX < (resizeHandleWidth + cornerExtra);
-    const topCorner = event.clientY < (resizeHandleHeight + cornerExtra);
-    const bottomCorner = event.clientY < bottomContentEdge && (bottomContentEdge - event.clientY) < (resizeHandleHeight + cornerExtra);
+    const rightCorner = event.clientX < rightContentEdge && (rightContentEdge - event.clientX) < (rightWidth + cornerExtra);
+    const leftCorner = event.clientX < (leftWidth + cornerExtra);
+    const topCorner = event.clientY < (topHeight + cornerExtra);
+    const bottomCorner = event.clientY < bottomContentEdge && (bottomContentEdge - event.clientY) < (bottomHeight + cornerExtra);
 
     if (!leftCorner && !topCorner && !bottomCorner && !rightCorner) {
         // Optimisation: out of all corner areas implies out of borders.
@@ -296,4 +302,11 @@ function onMouseMove(event: MouseEvent): void {
     else if (rightBorder) setResize("e-resize");
     // Out of border area.
     else setResize();
+}
+
+interface ResizeBorder {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
 }
