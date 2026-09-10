@@ -25,8 +25,9 @@ changes back to Wails upstream.
 6. Once the requested change is verified, it may be committed and pushed to `origin`
    without a separate review-service run or an additional push-confirmation round trip.
 7. Report the commit, tag when applicable, verification performed, and remote sync state.
-8. Work on `master` and keep it in sync with `upstream/master`; publish `-nahida.N` tags
-   from `master`. The former `v3-nahida` branch is superseded by `master`.
+8. Work on `master` and keep it in sync with `upstream/master`; publish release tags
+   using the plain upstream version from `master`. The former `v3-nahida` branch is
+   superseded by `master`.
 
 ### Important Rules
 
