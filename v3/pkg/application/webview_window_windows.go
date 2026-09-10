@@ -40,6 +40,7 @@ var edgeMap = map[string]uintptr{
 }
 
 type windowsWebviewWindow struct {
+	requestCancellation      *windowsRequestCancellation
 	windowImpl               unsafe.Pointer
 	parent                   *WebviewWindow
 	hwnd                     w32.HWND
@@ -875,6 +876,7 @@ func (w *windowsWebviewWindow) setRelativePosition(x int, y int) {
 }
 
 func (w *windowsWebviewWindow) destroy() {
+	w.requestCancellation.close()
 	w.releaseModalParent(w.isFocused())
 
 	if w.dropTarget != nil {
@@ -1692,6 +1694,7 @@ func (w *windowsWebviewWindow) WndProc(msg uint32, wparam, lparam uintptr) uintp
 		// DefWindowProc destroys the modal and may select the next unrelated
 		// top-level window, so remember whether its owner should remain active.
 		restoreParentActivation := w.isFocused()
+		w.requestCancellation.close()
 		w.chromium.ShuttingDown()
 		w.releaseModalParent(restoreParentActivation)
 		result := w32.DefWindowProc(w.hwnd, w32.WM_CLOSE, 0, 0)
@@ -2387,6 +2390,9 @@ func (w *windowsWebviewWindow) processRequest(
 		return
 	}
 
+	if w.requestCancellation != nil && !w.requestCancellation.closed {
+		webviewRequest = w.requestCancellation.tracker.Wrap(webviewRequest)
+	}
 	webviewRequests <- &webViewAssetRequest{
 		Request:    webviewRequest,
 		windowId:   w.parent.id,
@@ -2654,6 +2660,12 @@ func (w *windowsWebviewWindow) setupChromium() {
 		chromium.SetGlobalPermission(edge.CoreWebView2PermissionStateAllow)
 	}
 	chromium.AddWebResourceRequestedFilter("*", edge.COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL)
+
+	w.startRequestCancellation(w.navigateInitialPage)
+}
+
+func (w *windowsWebviewWindow) navigateInitialPage() {
+	chromium := w.chromium
 
 	if w.parent.options.HTML != "" {
 		var script string
