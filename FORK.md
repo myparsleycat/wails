@@ -2,12 +2,13 @@
 
 Fork of [wailsapp/wails](https://github.com/wailsapp/wails) used by nahida-desktop.
 
-Branch `v3-nahida` is based on `v3.0.0-beta.17` plus the patches below.
+Branch `master` is the fork's integration line. It tracks upstream `master`
+and carries the patches below; upstream changes are merged in as they land.
 The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.17-nahida.1
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.17-nahida.4
 ```
 
 ## Maintenance policy
@@ -18,6 +19,9 @@ replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-
   pull requests for these patches, and never push fork branches or tags there.
 - Upstream-specific review automation, including CodeRabbit, is optional and is not a
   commit or release gate for this fork.
+- Keep `master` in sync with `wailsapp/wails` master and merge upstream changes before
+  developing new patches. Publish every `-nahida.N` tag from `master`; the former
+  `v3-nahida` branch is superseded by `master`.
 - Record consumer-visible patches below and publish a new `-nahida.N` tag when
   `nahida-desktop` needs to pin the change.
 
