@@ -10,7 +10,7 @@ import (
 
 func TestResizeBorderHitTestForRects(t *testing.T) {
 	windowRect := w32.RECT{Left: 0, Top: 0, Right: 120, Bottom: 120}
-	visibleRect := w32.RECT{Left: 8, Top: 8, Right: 112, Bottom: 112}
+	contentRect := w32.RECT{Left: 8, Top: 8, Right: 112, Bottom: 112}
 	resizeBorder := WindowsWindowResizeBorder{
 		Inside:  LRTB{Top: 4},
 		Outside: LRTB{Left: 8, Right: 8, Top: 8, Bottom: 8},
@@ -37,7 +37,7 @@ func TestResizeBorderHitTestForRects(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, hit := resizeBorderHitTestForRects(test.x, test.y, windowRect, visibleRect, resizeBorder, 96)
+			got, hit := resizeBorderHitTestForRects(test.x, test.y, windowRect, contentRect, resizeBorder, 96)
 			if hit != test.wantHit || got != test.want {
 				t.Fatalf("resizeBorderHitTestForRects(%d, %d) = (%d, %t), want (%d, %t)",
 					test.x, test.y, got, hit, test.want, test.wantHit)
@@ -46,23 +46,36 @@ func TestResizeBorderHitTestForRects(t *testing.T) {
 	}
 }
 
+func TestResizeBorderClientRect(t *testing.T) {
+	windowRect := w32.RECT{Left: 10, Top: 20, Right: 210, Bottom: 140}
+	resizeBorder := WindowsWindowResizeBorder{
+		Outside: LRTB{Left: 8, Right: 6, Top: 4, Bottom: 2},
+	}
+
+	got := resizeBorderClientRect(windowRect, resizeBorder, 144)
+	want := w32.RECT{Left: 22, Top: 26, Right: 201, Bottom: 137}
+	if got != want {
+		t.Fatalf("resizeBorderClientRect() = %+v, want %+v", got, want)
+	}
+}
+
+func TestResizeBorderClientRectClampsOversizedBorders(t *testing.T) {
+	windowRect := w32.RECT{Left: 10, Top: 20, Right: 20, Bottom: 30}
+	resizeBorder := WindowsWindowResizeBorder{
+		Outside: LRTB{Left: 20, Right: 20, Top: 20, Bottom: 20},
+	}
+
+	got := resizeBorderClientRect(windowRect, resizeBorder, 96)
+	want := w32.RECT{Left: 20, Top: 30, Right: 20, Bottom: 30}
+	if got != want {
+		t.Fatalf("resizeBorderClientRect() = %+v, want %+v", got, want)
+	}
+}
+
 func TestScaleResizeBorder(t *testing.T) {
 	got := scaleResizeBorder(LRTB{Left: 8, Right: -1, Top: 4, Bottom: 2}, 144)
 	want := (LRTB{Left: 12, Right: 0, Top: 6, Bottom: 3})
 	if got != want {
 		t.Fatalf("scaleResizeBorder() = %+v, want %+v", got, want)
-	}
-}
-
-func TestValidVisibleFrameRect(t *testing.T) {
-	windowRect := w32.RECT{Left: 0, Top: 0, Right: 120, Bottom: 120}
-	if !validVisibleFrameRect(w32.RECT{Left: 8, Top: 8, Right: 112, Bottom: 112}, windowRect) {
-		t.Fatal("expected inset visible frame to be valid")
-	}
-	if validVisibleFrameRect(w32.RECT{Left: -1, Top: 0, Right: 120, Bottom: 120}, windowRect) {
-		t.Fatal("expected frame extending outside the window to be invalid")
-	}
-	if validVisibleFrameRect(w32.RECT{}, windowRect) {
-		t.Fatal("expected empty frame to be invalid")
 	}
 }

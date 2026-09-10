@@ -360,8 +360,7 @@ const (
 // WindowsWindowResizeBorder configures the resize hit-test area around a
 // frameless Windows window. Values are device-independent pixels measured from
 // the visible window edge. Inside extends into the window content and Outside
-// extends into the invisible native frame. The effective outside area cannot
-// exceed the native frame owned by Windows.
+// reserves an invisible native frame outside the window content.
 //
 // Set WindowsWindow.ResizeBorder to nil to retain Wails' default system-sized
 // resize areas and enlarged corner targets. Negative values are treated as 0.

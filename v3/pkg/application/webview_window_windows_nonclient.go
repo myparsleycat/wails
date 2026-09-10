@@ -220,19 +220,18 @@ func (w *windowsWebviewWindow) resizeBorderHitTest(screenX, screenY int) (uintpt
 
 	rect := w32.GetWindowRect(w.hwnd)
 	if resizeBorder := w.customResizeBorder(); resizeBorder != nil {
-		visibleRect := *rect
-		var frameRect w32.RECT
-		if w32.SUCCEEDED(w32.DwmGetWindowAttribute(
-			w.hwnd,
-			w32.DWMWA_EXTENDED_FRAME_BOUNDS,
-			unsafe.Pointer(&frameRect),
-			unsafe.Sizeof(frameRect),
-		)) && validVisibleFrameRect(frameRect, *rect) {
-			visibleRect = frameRect
+		clientRect := w32.GetClientRect(w.hwnd)
+		left, top := w32.ClientToScreen(w.hwnd, int(clientRect.Left), int(clientRect.Top))
+		right, bottom := w32.ClientToScreen(w.hwnd, int(clientRect.Right), int(clientRect.Bottom))
+		contentRect := w32.RECT{
+			Left:   int32(left),
+			Top:    int32(top),
+			Right:  int32(right),
+			Bottom: int32(bottom),
 		}
 
 		dpi, _ := w.DPI()
-		return resizeBorderHitTestForRects(screenX, screenY, *rect, visibleRect, *resizeBorder, dpi)
+		return resizeBorderHitTestForRects(screenX, screenY, *rect, contentRect, *resizeBorder, dpi)
 	}
 
 	width := int(rect.Right - rect.Left)
@@ -291,15 +290,9 @@ func (w *windowsWebviewWindow) customResizeBorder() *WindowsWindowResizeBorder {
 	return w.parent.options.Windows.ResizeBorder
 }
 
-func validVisibleFrameRect(visible, window w32.RECT) bool {
-	return visible.Left < visible.Right && visible.Top < visible.Bottom &&
-		visible.Left >= window.Left && visible.Top >= window.Top &&
-		visible.Right <= window.Right && visible.Bottom <= window.Bottom
-}
-
 func resizeBorderHitTestForRects(
 	screenX, screenY int,
-	windowRect, visibleRect w32.RECT,
+	windowRect, contentRect w32.RECT,
 	resizeBorder WindowsWindowResizeBorder,
 	dpi w32.UINT,
 ) (uintptr, bool) {
@@ -308,23 +301,23 @@ func resizeBorderHitTestForRects(
 
 	left := inHalfOpenRange(
 		screenX,
-		max(int(windowRect.Left), int(visibleRect.Left)-outside.Left),
-		min(int(windowRect.Right), int(visibleRect.Left)+inside.Left),
+		max(int(windowRect.Left), int(contentRect.Left)-outside.Left),
+		min(int(windowRect.Right), int(contentRect.Left)+inside.Left),
 	)
 	right := inHalfOpenRange(
 		screenX,
-		max(int(windowRect.Left), int(visibleRect.Right)-inside.Right),
-		min(int(windowRect.Right), int(visibleRect.Right)+outside.Right),
+		max(int(windowRect.Left), int(contentRect.Right)-inside.Right),
+		min(int(windowRect.Right), int(contentRect.Right)+outside.Right),
 	)
 	top := inHalfOpenRange(
 		screenY,
-		max(int(windowRect.Top), int(visibleRect.Top)-outside.Top),
-		min(int(windowRect.Bottom), int(visibleRect.Top)+inside.Top),
+		max(int(windowRect.Top), int(contentRect.Top)-outside.Top),
+		min(int(windowRect.Bottom), int(contentRect.Top)+inside.Top),
 	)
 	bottom := inHalfOpenRange(
 		screenY,
-		max(int(windowRect.Top), int(visibleRect.Bottom)-inside.Bottom),
-		min(int(windowRect.Bottom), int(visibleRect.Bottom)+outside.Bottom),
+		max(int(windowRect.Top), int(contentRect.Bottom)-inside.Bottom),
+		min(int(windowRect.Bottom), int(contentRect.Bottom)+outside.Bottom),
 	)
 
 	switch {
@@ -347,6 +340,15 @@ func resizeBorderHitTestForRects(
 	default:
 		return 0, false
 	}
+}
+
+func resizeBorderClientRect(windowRect w32.RECT, resizeBorder WindowsWindowResizeBorder, dpi w32.UINT) w32.RECT {
+	outside := scaleResizeBorder(resizeBorder.Outside, dpi)
+	windowRect.Left = min(windowRect.Left+int32(outside.Left), windowRect.Right)
+	windowRect.Right = max(windowRect.Right-int32(outside.Right), windowRect.Left)
+	windowRect.Top = min(windowRect.Top+int32(outside.Top), windowRect.Bottom)
+	windowRect.Bottom = max(windowRect.Bottom-int32(outside.Bottom), windowRect.Top)
+	return windowRect
 }
 
 func scaleResizeBorder(border LRTB, dpi w32.UINT) LRTB {

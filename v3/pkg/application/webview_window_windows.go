@@ -2113,6 +2113,10 @@ func (w *windowsWebviewWindow) WndProc(msg uint32, wparam, lparam uintptr) uintp
 						Bottom: int32(rect.Y + rect.Height),
 					}
 					w.setPadding(edge.Rect{})
+				} else if resizeBorder := w.customResizeBorder(); resizeBorder != nil {
+					dpi, _ := w.DPI()
+					*rgrc = resizeBorderClientRect(*rgrc, *resizeBorder, dpi)
+					w.setPadding(edge.Rect{})
 				} else {
 					// This is needed to work around the resize flickering in frameless mode with WindowDecorations
 					// See: https://stackoverflow.com/a/6558508

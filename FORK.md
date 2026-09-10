@@ -57,7 +57,8 @@ Added for frameless resize hit testing on Windows:
 
 - `WindowsWindow.ResizeBorder` configures independent inside and outside resize widths for every edge
 - Apply inside widths to both the native hit test and JavaScript runtime, without the default enlarged corner targets
-- Measure outside widths from DWM's visible frame and clamp them to the native invisible frame
+- Reserve outside widths as native non-client frame around the WebView content
+- Measure native hit tests from the actual client edge so the full configured outside band remains interactive
 
 ## Startup browser arguments
 
