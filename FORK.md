@@ -8,7 +8,7 @@ The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.20
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.21
 ```
 
 ## Maintenance policy
@@ -23,7 +23,7 @@ replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-
   developing new patches. Publish release tags from `master`; the former `v3-nahida`
   branch is superseded by `master`.
 - Record consumer-visible patches below and publish a tag using the plain upstream
-  version (for example `v3.0.0-beta.20`) when `nahida-desktop` needs to pin the change.
+  version (for example `v3.0.0-beta.21`) when `nahida-desktop` needs to pin the change.
   Historical `-nahida.N` tags remain valid.
 
 ## Patches
