@@ -8,7 +8,7 @@ The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.21
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.22
 ```
 
 ## Maintenance policy
@@ -27,6 +27,12 @@ replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-
   Historical `-nahida.N` tags remain valid.
 
 ## Patches
+
+Added for desktop startup maintenance:
+
+- `ServiceOptions.BeforeCall` runs at the Wails binding call boundary before invoking a service method.
+- The hook receives the bound method name and a context cancelled by call cancellation, window closing, or request cancellation while the hook waits.
+- Hook errors use the service's `MarshalError` handler; direct Go calls and bound method execution retain their existing behavior.
 
 Added for GameBanana auto-login:
 

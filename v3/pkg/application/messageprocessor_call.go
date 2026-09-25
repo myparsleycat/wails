@@ -37,6 +37,7 @@ func (m *MessageProcessor) processCallCancelMethod(req *RuntimeRequest) (any, er
 }
 
 func (m *MessageProcessor) processCallMethod(ctx context.Context, req *RuntimeRequest, window Window) (any, error) {
+	requestCtx := ctx
 	callID := req.Args.AsMap().String("call-id")
 	if callID == nil || *callID == "" {
 		return nil, errs.NewInvalidBindingCallErrorf("missing argument 'call-id'")
@@ -134,6 +135,27 @@ func (m *MessageProcessor) processCallMethod(ctx context.Context, req *RuntimeRe
 		// Set the context values for the window
 		if window != nil {
 			ctx = context.WithValue(ctx, WindowKey, window)
+		}
+		if boundMethod.beforeCall != nil {
+			waitCtx, cancelWait := context.WithCancel(ctx)
+			stopRequestCancel := context.AfterFunc(requestCtx, cancelWait)
+			waitErr := boundMethod.beforeCall(waitCtx, boundMethod.Name)
+			if waitErr == nil {
+				waitErr = requestCtx.Err()
+			}
+			if waitErr == nil {
+				waitErr = waitCtx.Err()
+			}
+			stopRequestCancel()
+			cancelWait()
+			if waitErr != nil {
+				callErr := &CallError{
+					Message: waitErr.Error(),
+					Cause:   json.RawMessage(boundMethod.marshalError(waitErr)),
+					Kind:    RuntimeError,
+				}
+				return nil, errs.WrapBindingCallFailedErrorf(callErr, "Bound method returned an error")
+			}
 		}
 
 		result, err = boundMethod.Call(ctx, options.Args)

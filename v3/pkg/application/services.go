@@ -37,6 +37,11 @@ type ServiceOptions struct {
 	//
 	// If the returned slice is not nil, it must contain valid JSON.
 	MarshalError func(error) []byte
+
+	// BeforeCall runs before a bound method is invoked from the runtime.
+	// The context is cancelled when the call, source window, or request is cancelled.
+	// It does not run for direct Go calls to the service instance.
+	BeforeCall func(context.Context, string) error
 }
 
 // DefaultServiceOptions specifies the default values of service options,

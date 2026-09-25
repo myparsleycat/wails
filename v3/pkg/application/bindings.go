@@ -78,6 +78,7 @@ type BoundMethod struct {
 	Inputs       []*Parameter  `json:"inputs,omitempty"`
 	Outputs      []*Parameter  `json:"outputs,omitempty"`
 	marshalError func(error) []byte
+	beforeCall   func(context.Context, string) error
 	ID           uint32 `json:"id"`
 	needsContext bool
 	isVariadic   bool // cached at registration to avoid reflect call per invocation
@@ -159,6 +160,7 @@ func (b *Bindings) Add(service Service) error {
 	for _, method := range methods {
 		// Store composite error marshaler
 		method.marshalError = marshalError
+		method.beforeCall = service.options.BeforeCall
 
 		// Register method
 		b.boundMethods[method.FQN] = method
