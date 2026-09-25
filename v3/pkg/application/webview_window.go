@@ -285,6 +285,12 @@ func (w *WebviewWindow) markAsDestroyed() {
 	w.destroyed = true
 	w.destroyedLock.Unlock()
 
+	// WindowClosing reaches this path on Windows even when the request tracker
+	// is unavailable, so pending binding calls must be cancelled here.
+	if globalApplication != nil && globalApplication.messageProcessor != nil {
+		globalApplication.messageProcessor.CancelWindowCalls(w.id)
+	}
+
 	// Release anyone blocked on a full queue. Done outside destroyedLock so the
 	// lock order between it and eventQueueMu is always one-way.
 	w.closeEventQueue()
@@ -1156,11 +1162,6 @@ func (w *WebviewWindow) SetRelativePosition(x, y int) Window {
 func (w *WebviewWindow) destroy() {
 	if w.impl == nil || w.isDestroyed() {
 		return
-	}
-
-	// Cancel all pending async calls for this window
-	if globalApplication.messageProcessor != nil {
-		globalApplication.messageProcessor.CancelWindowCalls(w.id)
 	}
 
 	// Cancel the callbacks

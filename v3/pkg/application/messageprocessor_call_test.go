@@ -113,7 +113,7 @@ func TestBeforeCallErrorUsesServiceMarshaler(t *testing.T) {
 }
 
 func TestBeforeCallWaitCanBeCancelled(t *testing.T) {
-	for _, kind := range []string{"call", "window", "request"} {
+	for _, kind := range []string{"call", "window", "window-close", "request"} {
 		t.Run(kind, func(t *testing.T) {
 			entered := make(chan struct{})
 			processor, service, method := setupBeforeCallTest(t, ServiceOptions{
@@ -126,9 +126,11 @@ func TestBeforeCallWaitCanBeCancelled(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			request := beforeCallRequest(t, method, "cancel-"+kind, false)
-			if kind == "window" {
-				window := &WebviewWindow{id: 7, options: WebviewWindowOptions{Name: "main"}}
+			var window *WebviewWindow
+			if kind == "window" || kind == "window-close" {
+				window = &WebviewWindow{id: 7, options: WebviewWindowOptions{Name: "main"}}
 				globalApplication.windows[7] = window
+				globalApplication.messageProcessor = processor
 				request.WebviewWindowID = 7
 			}
 			done := make(chan error, 1)
@@ -151,6 +153,8 @@ func TestBeforeCallWaitCanBeCancelled(t *testing.T) {
 				}
 			case "window":
 				processor.CancelWindowCalls(7)
+			case "window-close":
+				window.markAsDestroyed()
 			case "request":
 				cancel()
 			}
