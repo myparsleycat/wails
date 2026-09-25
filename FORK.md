@@ -8,7 +8,7 @@ The Go module path stays `github.com/wailsapp/wails/v3`. Consumers pin this
 fork with a `replace` directive, for example:
 
 ```
-replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.23
+replace github.com/wailsapp/wails/v3 => github.com/myparsleycat/wails/v3 v3.0.0-beta.26
 ```
 
 ## Maintenance policy
