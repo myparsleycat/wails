@@ -2492,10 +2492,7 @@ func (w *windowsWebviewWindow) addWailsRequestHeaders(req *edge.ICoreWebView2Web
 		if err != nil {
 			globalApplication.fatal("error setting WindowId header: %w", err)
 		}
-		err = reqHeaders.Release()
-		if err != nil {
-			globalApplication.fatal("error releasing headers: %w", err)
-		}
+		reqHeaders.Release()
 	}
 }
 
@@ -3005,12 +3002,7 @@ func (w *windowsWebviewWindow) processMessageWithAdditionalObjects(
 			return
 		}
 
-		defer func() {
-			err = objs.Release()
-			if err != nil {
-				globalApplication.error("error releasing objects: %w", err)
-			}
-		}()
+		defer objs.Release()
 
 		count, err := objs.GetCount()
 		if err != nil {
