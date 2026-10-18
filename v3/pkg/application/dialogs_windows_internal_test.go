@@ -50,3 +50,23 @@ func TestNormalizeFileDialogError(t *testing.T) {
 		}
 	})
 }
+
+// Guards #6263 (promised in #2411): an OpenFile dialog that allows directories and multiple
+// selection must offer multiple folders on Windows, as on macOS and Linux.
+// It previously fell back to a single-folder picker.
+func TestOpenDialogKindFor(t *testing.T) {
+	cases := []struct {
+		dirs, multi bool
+		want        openDialogKind
+	}{
+		{false, false, openSingleFile},
+		{false, true, openMultipleFiles},
+		{true, false, openSingleFolder},
+		{true, true, openMultipleFolders},
+	}
+	for _, c := range cases {
+		if got := openDialogKindFor(c.dirs, c.multi); got != c.want {
+			t.Errorf("openDialogKindFor(dirs=%v, multi=%v) = %v, want %v", c.dirs, c.multi, got, c.want)
+		}
+	}
+}
