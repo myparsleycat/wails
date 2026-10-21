@@ -28,6 +28,37 @@ _/
 
 ## [Unreleased]
 
+## v3.0.0-beta.34 - 2026-10-20
+
+## Fixed
+- Fix Windows webview not regaining focus on window activation, and Tab being trapped inside the webview instead of moving to the native window and back (#3783)
+- Fix `internal/webview2/pkg/webview2` COM vtable structs (`ICoreWebView2_2`..`_27` and other derived interfaces) omitting the inherited method chain, which made calls land on the wrong vtable slot (#6129)
+- Fix Windows question dialogs ignoring custom button labels and never firing button callbacks; custom buttons are now shown with a TaskDialog (falling back to MessageBox with positional callback mapping when comctl32 v6 is unavailable) (#5794)
+- Fix `wails3 dev` hanging for 60s against Vite: the automatic frontend readiness gate now uses a TCP probe instead of an HTTP GET that sent no `Accept` header and received a 404 ([#6209](https://github.com/wailsapp/wails/issues/6209))
+- Keep systray menus working when updated while open in [PR](https://github.com/wailsapp/wails/pull/6301) by @taliesin-ai
+- Handle transient WebView2 COM errors gracefully in runtime operations in [PR](https://github.com/wailsapp/wails/pull/6302) by @leaanthony
+
+## v3.0.0-beta.33 - 2026-10-19
+
+## Added
+- Binding generator now emits a `bindings/events` module exporting a typed name constant for every discoverable event registered with `application.RegisterEvent` using a compile-time constant name (e.g. `UserLogin` for `user:login`), usable with `Events.On`/`Emit` without the Vite plugin (#5645)
+
+## Fixed
+- Fix Windows question dialogs ignoring custom button labels and never firing button callbacks; custom buttons are now shown with a TaskDialog (falling back to MessageBox with positional callback mapping when comctl32 v6 is unavailable) (#5794)
+- Fix `wails3 dev` hanging for 60s against Vite: the automatic frontend readiness gate now uses a TCP probe instead of an HTTP GET that sent no `Accept` header and received a 404 ([#6209](https://github.com/wailsapp/wails/issues/6209))
+- Keep systray menus working when updated while open in [PR](https://github.com/wailsapp/wails/pull/6301) by @taliesin-ai
+- Handle transient WebView2 COM errors gracefully in runtime operations in [PR](https://github.com/wailsapp/wails/pull/6302) by @leaanthony
+
+## v3.0.0-beta.32 - 2026-10-18
+
+## Added
+- Add native macOS menu section headers for macOS 14+ — see the [documentation site](https://v3.wails.io) (20 pages updated) in [PR](https://github.com/wailsapp/wails/pull/6297) by @leaanthony
+
+## Fixed
+- Make SetRelativePosition relative to screen work area on macOS in [PR](https://github.com/wailsapp/wails/pull/6299) by @leaanthony
+- Updater helper relaunches unchanged target after parent timeout or failed replacement in [PR](https://github.com/wailsapp/wails/pull/6298) by @taliesin-ai
+- Pin pnpm to version 10 for versioned docs in [PR](https://github.com/wailsapp/wails/pull/6293) by @taliesin-ai
+
 ## v3.0.0-beta.31 - 2026-10-18
 
 ## Added
