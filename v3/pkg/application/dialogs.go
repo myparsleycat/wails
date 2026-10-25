@@ -188,6 +188,7 @@ type OpenFileDialogOptions struct {
 	Message    string
 	ButtonText string
 	Directory  string
+	Role       string
 }
 
 type OpenFileDialogStruct struct {
@@ -208,6 +209,7 @@ type OpenFileDialogStruct struct {
 	message    string
 	buttonText string
 	directory  string
+	role       string
 	window     Window
 
 	impl openFileDialogImpl
@@ -322,6 +324,15 @@ func (d *OpenFileDialogStruct) SetDirectory(directory string) *OpenFileDialogStr
 	return d
 }
 
+// SetRole names the purpose of the dialog. On Windows the role selects the
+// client GUID under which the system remembers the last visited folder, so
+// dialogs with different roles do not share it. Dialogs without a role share
+// one GUID. Other platforms ignore the role.
+func (d *OpenFileDialogStruct) SetRole(role string) *OpenFileDialogStruct {
+	d.role = role
+	return d
+}
+
 func (d *OpenFileDialogStruct) CanSelectHiddenExtension(canSelectHiddenExtension bool) *OpenFileDialogStruct {
 	d.canSelectHiddenExtension = canSelectHiddenExtension
 	return d
@@ -332,6 +343,7 @@ func (d *OpenFileDialogStruct) SetOptions(options *OpenFileDialogOptions) {
 	d.message = options.Message
 	d.buttonText = options.ButtonText
 	d.directory = options.Directory
+	d.role = options.Role
 	d.canChooseDirectories = options.CanChooseDirectories
 	d.canChooseFiles = options.CanChooseFiles
 	if !options.CanChooseFiles && !options.CanChooseDirectories {
@@ -378,6 +390,7 @@ type SaveFileDialogOptions struct {
 	Directory                       string
 	Filename                        string
 	ButtonText                      string
+	Role                            string
 	Filters                         []FileFilter
 	Window                          Window
 }
@@ -394,6 +407,7 @@ type SaveFileDialogStruct struct {
 	directory                       string
 	filename                        string
 	buttonText                      string
+	role                            string
 	filters                         []FileFilter
 
 	window Window
@@ -418,6 +432,7 @@ func (d *SaveFileDialogStruct) SetOptions(options *SaveFileDialogOptions) {
 	d.directory = options.Directory
 	d.filename = options.Filename
 	d.buttonText = options.ButtonText
+	d.role = options.Role
 	d.filters = options.Filters
 	d.window = options.Window
 }
@@ -454,6 +469,12 @@ func (d *SaveFileDialogStruct) SetMessage(message string) *SaveFileDialogStruct 
 
 func (d *SaveFileDialogStruct) SetDirectory(directory string) *SaveFileDialogStruct {
 	d.directory = directory
+	return d
+}
+
+// SetRole names the purpose of the dialog. See [OpenFileDialogStruct.SetRole].
+func (d *SaveFileDialogStruct) SetRole(role string) *SaveFileDialogStruct {
+	d.role = role
 	return d
 }
 

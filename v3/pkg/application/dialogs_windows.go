@@ -203,7 +203,7 @@ func (m *windowOpenFileDialog) show() (chan string, error) {
 
 	config := cfd.DialogConfig{
 		Title:       m.dialog.title,
-		Role:        "PickFolder",
+		Role:        fileDialogRole(m.dialog.role, "PickFolder"),
 		FileFilters: convertFilters(m.dialog.filters),
 		Folder:      defaultFolder,
 	}
@@ -259,6 +259,15 @@ func (m *windowOpenFileDialog) show() (chan string, error) {
 	return files, nil
 }
 
+// fileDialogRole keeps the historical role for dialogs that set none, so they
+// keep the folder Windows remembered for them before roles existed.
+func fileDialogRole(role, fallback string) string {
+	if role == "" {
+		return fallback
+	}
+	return role
+}
+
 // openDialogKind is the Common Item Dialog an OpenFile dialog is shown as.
 type openDialogKind int
 
@@ -306,7 +315,7 @@ func (m *windowSaveFileDialog) show() (chan string, error) {
 
 	config := cfd.DialogConfig{
 		Title:       m.dialog.title,
-		Role:        "SaveFile",
+		Role:        fileDialogRole(m.dialog.role, "SaveFile"),
 		FileFilters: convertFilters(m.dialog.filters),
 		FileName:    m.dialog.filename,
 		Folder:      defaultFolder,
