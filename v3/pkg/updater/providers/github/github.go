@@ -169,7 +169,7 @@ func (p *Provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 
 	// Stash the download URL on Metadata so Download can find it without
 	// re-querying the API.
-	out.Metadata["github.asset.url"] = picked.BrowserDownloadURL
+	out.Metadata["github.asset.url"] = picked.URL
 
 	// Optional verification via a sibling checksum asset.
 	if p.cfg.ChecksumAsset != "" {
@@ -203,8 +203,8 @@ func (p *Provider) Download(ctx context.Context, rel *updater.Release, dst io.Wr
 	if err != nil {
 		return err
 	}
-	// browser_download_url returns 302 → a presigned URL. The redirect
-	// chain may go to a different host; we strip Authorization on the hop.
+
+	// The redirect chain may go to a different host; we strip Authorization on the hop.
 	req.Header.Set("Accept", "application/octet-stream")
 	p.setAuth(req)
 
@@ -324,7 +324,7 @@ func (p *Provider) fetchChecksumFor(ctx context.Context, assets []apiAsset, side
 	if idx < 0 {
 		return nil, nil
 	}
-	urlStr := assets[idx].BrowserDownloadURL
+	urlStr := assets[idx].URL
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err
@@ -472,7 +472,7 @@ func asReleaseAssets(in []apiAsset) []ReleaseAsset {
 			Name:        a.Name,
 			ContentType: a.ContentType,
 			Size:        a.Size,
-			URL:         a.BrowserDownloadURL,
+			URL:         a.URL,
 		}
 	}
 	return out
@@ -492,9 +492,9 @@ type apiRelease struct {
 }
 
 type apiAsset struct {
-	ID                 int64  `json:"id"`
-	Name               string `json:"name"`
-	ContentType        string `json:"content_type"`
-	Size               int64  `json:"size"`
-	BrowserDownloadURL string `json:"browser_download_url"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	ContentType string `json:"content_type"`
+	Size        int64  `json:"size"`
+	URL         string `json:"url"`
 }

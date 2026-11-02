@@ -1,13 +1,31 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+// The shared protocol test environment has no DOM, so drag.js gets only what it reads.
+class FakeMouseEvent extends Event {
+    constructor(type, init = {}) {
+        super(type);
+        Object.assign(this, { buttons: 0, button: 0, clientX: 0, clientY: 0 }, init);
+    }
+}
 
 beforeAll(async () => {
-    Object.defineProperties(window, {
-        innerWidth: { configurable: true, value: 100 },
-        innerHeight: { configurable: true, value: 100 },
+    const events = new EventTarget();
+    vi.stubGlobal("MouseEvent", FakeMouseEvent);
+    vi.stubGlobal("HTMLElement", class {});
+    vi.stubGlobal("Node", class {});
+    vi.stubGlobal("document", {
+        readyState: "complete",
+        addEventListener() {},
+        body: { style: { cursor: "auto" } },
+        documentElement: { clientWidth: 100, clientHeight: 100 },
     });
-    Object.defineProperties(document.documentElement, {
-        clientWidth: { configurable: true, value: 100 },
-        clientHeight: { configurable: true, value: 100 },
+    Object.assign(window, {
+        innerWidth: 100,
+        innerHeight: 100,
+        addEventListener: events.addEventListener.bind(events),
+        dispatchEvent: events.dispatchEvent.bind(events),
+        setInterval: () => 0,
+        clearInterval() {},
     });
     window._wails = {
         environment: { OS: "windows" },
