@@ -7,8 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 )
+
+// maxPreallocatedBody bounds the allocation a Content-Length header can request
+// up front; larger bodies still work and grow as they are written.
+const maxPreallocatedBody = 1 << 30
 
 var _ http.ResponseWriter = &responseWriter{}
 
@@ -47,6 +52,15 @@ func (rw *responseWriter) Write(buf []byte) (int, error) {
 	}
 
 	rw.WriteHeader(http.StatusOK)
+
+	// http.ServeContent copies the body in 32 KiB chunks, so without this the
+	// buffer reallocates on every doubling and allocates about twice the body.
+	if rw.body.Len() == 0 {
+		if size, err := strconv.ParseInt(rw.header.Get("Content-Length"), 10, 64); err == nil &&
+			size > int64(len(buf)) && size <= maxPreallocatedBody {
+			rw.body.Grow(int(size))
+		}
+	}
 
 	return rw.body.Write(buf)
 }
